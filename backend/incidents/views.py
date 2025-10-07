@@ -12,7 +12,7 @@ import requests
 from rest_framework import status
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.hashers import check_password
-#from twilio.rest import Client
+from twilio.rest import Client
 import json
 from geopy.distance import great_circle
 from .models import Incidents, FireStations, PoliceStations, User, Comment, Hospital, MunicipalCorporation
