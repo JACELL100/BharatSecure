@@ -21,6 +21,7 @@ urlpatterns = [
     path('incident-analysis/', views.get_incident_analytics, name='incident-analytics'),
     path("api/user/<int:user_id>/", views.UserDetailView.as_view(), name="user-detail"),
     path("voice-report/", views.voicereport.as_view(), name="user-detail"),
+    path('incident-forecast/', views.incident_forecast, name='incident-forecast'),
 
     # RAG Knowledge Base endpoint
     path('rag-knowledge-query/', views.rag_knowledge_query, name='rag-knowledge-query'),

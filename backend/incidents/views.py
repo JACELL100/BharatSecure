@@ -30,6 +30,7 @@ from rest_framework import viewsets, status
 from langchain.schema.output_parser import StrOutputParser
 from rest_framework.parsers import JSONParser
 from tenacity import wait_exponential
+from django.core.cache import cache
 import re
 from django.db.models import (
     Avg, Count, Q, FloatField, F, 
@@ -80,7 +81,7 @@ from datetime import timedelta
 
 model = ChatGoogleGenerativeAI(
                 model="gemini-2.0-flash",
-                api_key="AIzaSyDLoq6B6LqlzqVH4umeSak-fOMIHiXAWOA",
+                api_key="AIzaSyAZnXtEhyAuHZX_huq4N6ZhRHMhBFZ2rs8",
                 max_retries=3,
                 retry_wait_strategy=wait_exponential(multiplier=1, min=4, max=10)
             )
@@ -1515,3 +1516,235 @@ def get_incident_analytics(request):
         'pending_incidents': base_queryset.filter(status='submitted').count(),
         'resolved_incidents': base_queryset.filter(status='resolved').count()
     })
+
+
+#forecasting Feature
+
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from django.db.models import Count
+from django.db.models.functions import TruncDate, ExtractHour, ExtractWeekDay
+from datetime import datetime, timedelta
+from django.utils import timezone
+import google.generativeai as genai
+import json
+
+# Configure Gemini API
+genai.configure(api_key="AIzaSyAZnXtEhyAuHZX_huq4N6ZhRHMhBFZ2rs8")
+
+@api_view(['GET'])
+def incident_forecast(request):
+    """
+    Generate AI-powered incident forecasting using Gemini 2.0 Flash
+    No authentication required - matches your other endpoints
+    """
+    try:
+        from .models import Incidents
+        
+        # Get all incidents
+        incidents = Incidents.objects.all()
+        
+        if not incidents.exists():
+            return Response({
+                'error': 'No incident data available for analysis',
+                'total_incidents': 0
+            }, status=200)
+        
+        # Calculate basic statistics
+        total_incidents = incidents.count()
+        resolved_count = incidents.filter(status='Resolved').count()
+        unresolved_count = total_incidents - resolved_count
+        
+        # Trend data - incidents per day for last 30 days
+        thirty_days_ago = timezone.now() - timedelta(days=30)
+        trend_data = list(
+            incidents.filter(reported_at__gte=thirty_days_ago)
+            .annotate(date=TruncDate('reported_at'))
+            .values('date')
+            .annotate(count=Count('id'))
+            .order_by('date')
+        )
+        
+        # Format dates for frontend
+        for item in trend_data:
+            item['date'] = item['date'].strftime('%Y-%m-%d')
+        
+        # Severity distribution
+        severity_distribution = list(
+            incidents.values('severity')
+            .annotate(count=Count('id'))
+            .order_by('-count')
+        )
+        
+        for item in severity_distribution:
+            item['name'] = item.pop('severity').capitalize() if item.get('severity') else 'Unknown'
+        
+        # Incident type distribution
+        type_distribution = list(
+            incidents.values('incidentType')
+            .annotate(count=Count('id'))
+            .order_by('-count')[:10]
+        )
+        
+        for item in type_distribution:
+            item['type'] = item.pop('incidentType')
+        
+        # Time-based analysis
+        hour_distribution = list(
+            incidents.annotate(hour=ExtractHour('reported_at'))
+            .values('hour')
+            .annotate(count=Count('id'))
+            .order_by('-count')
+        )
+        
+        peak_hour = hour_distribution[0]['hour'] if hour_distribution else 'N/A'
+        
+        # Day of week analysis
+        day_distribution = list(
+            incidents.annotate(day=ExtractWeekDay('reported_at'))
+            .values('day')
+            .annotate(count=Count('id'))
+            .order_by('-count')
+        )
+        
+        days_map = {1: 'Sunday', 2: 'Monday', 3: 'Tuesday', 4: 'Wednesday', 
+                   5: 'Thursday', 6: 'Friday', 7: 'Saturday'}
+        peak_day = days_map.get(day_distribution[0]['day'], 'N/A') if day_distribution else 'N/A'
+        
+        # High-risk areas
+        location_incidents = {}
+        for incident in incidents:
+            try:
+                if isinstance(incident.location, str):
+                    loc_data = json.loads(incident.location)
+                else:
+                    loc_data = incident.location
+                
+                if loc_data and 'latitude' in loc_data and 'longitude' in loc_data:
+                    lat = round(float(loc_data['latitude']), 3)
+                    lon = round(float(loc_data['longitude']), 3)
+                    loc_key = f"{lat},{lon}"
+                    location_incidents[loc_key] = location_incidents.get(loc_key, 0) + 1
+            except (json.JSONDecodeError, TypeError, KeyError):
+                continue
+        
+        sorted_locations = sorted(location_incidents.items(), key=lambda x: x[1], reverse=True)[:5]
+        high_risk_areas = []
+        for loc_key, count in sorted_locations:
+            if count > 2:
+                risk_score = min(int((count / total_incidents) * 100), 100)
+                high_risk_areas.append({
+                    'location': loc_key,
+                    'incident_count': count,
+                    'risk_score': risk_score,
+                    'reason': f'This area has reported {count} incidents, representing {risk_score}% of total incidents.'
+                })
+        
+        # Prepare data summary
+        data_summary = {
+            'total_incidents': total_incidents,
+            'resolved': resolved_count,
+            'unresolved': unresolved_count,
+            'resolution_rate': round((resolved_count / total_incidents * 100), 2) if total_incidents > 0 else 0,
+            'severity_breakdown': severity_distribution,
+            'top_incident_types': type_distribution[:5],
+            'peak_hour': f"{peak_hour}:00" if peak_hour != 'N/A' else 'N/A',
+            'peak_day': peak_day,
+            'high_risk_location_count': len(high_risk_areas),
+            'recent_trend': 'increasing' if len(trend_data) > 1 and trend_data[-1]['count'] > trend_data[0]['count'] else 'stable',
+            'average_daily_incidents': round(total_incidents / max(len(trend_data), 1), 2)
+        }
+        
+        # IMPROVED PROMPT - More conversational, structured output
+        model = genai.GenerativeModel('gemini-2.0-flash-exp')
+        
+        prompt = f"""You are an expert public safety analyst. Analyze this incident data and provide insights in a clear, professional tone.
+
+DATA SUMMARY:
+- Total Incidents: {data_summary['total_incidents']}
+- Resolved: {data_summary['resolved']} ({data_summary['resolution_rate']}%)
+- Unresolved: {data_summary['unresolved']}
+- Peak Hour: {data_summary['peak_hour']}
+- Peak Day: {data_summary['peak_day']}
+- Average Daily Incidents: {data_summary['average_daily_incidents']}
+- Trend: {data_summary['recent_trend']}
+- High-Risk Locations: {data_summary['high_risk_location_count']}
+
+Top Incident Types: {json.dumps(data_summary['top_incident_types'], indent=2)}
+Severity Breakdown: {json.dumps(data_summary['severity_breakdown'], indent=2)}
+
+Provide a concise analysis in 3-4 paragraphs covering:
+1. Current situation overview with key statistics
+2. Notable patterns in incident types, severity, and timing
+3. Trend analysis and what it means for resource planning
+4. Brief conclusion with priority areas
+
+Write in a professional but conversational tone. Use natural paragraphs, not bullet points or headers. Be specific with numbers and percentages."""
+
+        response = model.generate_content(prompt)
+        ai_summary = response.text.strip()
+        
+        # Predictions
+        if len(trend_data) >= 7:
+            recent_week_avg = sum(item['count'] for item in trend_data[-7:]) / 7
+            next_week_prediction = int(recent_week_avg * 7)
+        else:
+            next_week_prediction = int(data_summary['average_daily_incidents'] * 7)
+        
+        # IMPROVED RECOMMENDATIONS PROMPT
+        rec_prompt = f"""Based on this incident data:
+- Total: {data_summary['total_incidents']} incidents
+- Resolution Rate: {data_summary['resolution_rate']}%
+- Top Types: {', '.join([t['type'] for t in data_summary['top_incident_types'][:3]])}
+- Peak: {data_summary['peak_day']} at {data_summary['peak_hour']}
+- Trend: {data_summary['recent_trend']}
+
+Provide exactly 5 specific, actionable recommendations for police administration.
+Format as plain sentences, one per line, without numbers, bullets, or special characters.
+Each should be 1-2 sentences and directly actionable."""
+
+        rec_response = model.generate_content(rec_prompt)
+        recommendations_raw = rec_response.text.strip()
+        
+        # Clean recommendations - remove numbering, bullets, etc.
+        recommendations = []
+        for line in recommendations_raw.split('\n'):
+            line = line.strip()
+            # Remove common prefixes
+            line = line.lstrip('0123456789.-*•) \t')
+            if line and len(line) > 20:  # Filter out empty or very short lines
+                recommendations.append(line)
+        recommendations = recommendations[:5]  # Take only first 5
+        
+        # Prepare final response
+        forecast_data = {
+            'total_incidents': total_incidents,
+            'summary': ai_summary,
+            'predictions': {
+                'next_week': next_week_prediction,
+                'trend': data_summary['recent_trend'],
+                'confidence': 'moderate' if len(trend_data) >= 14 else 'low'
+            },
+            'trend_data': trend_data,
+            'severity_distribution': severity_distribution,
+            'type_distribution': type_distribution,
+            'high_risk_areas': high_risk_areas,
+            'peak_hour': f"{peak_hour}:00" if peak_hour != 'N/A' else 'N/A',
+            'time_analysis': {
+                'peak_hours': f"{peak_hour}:00 - {(peak_hour + 1) % 24}:00" if peak_hour != 'N/A' else 'N/A',
+                'peak_days': peak_day
+            },
+            'recommendations': recommendations,
+            'analysis_timestamp': timezone.now().isoformat()
+        }
+        
+        return Response(forecast_data, status=200)
+        
+    except Exception as e:
+        print(f"Error in incident_forecast: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return Response({
+            'error': 'Failed to generate forecast',
+            'details': str(e)
+        }, status=500)

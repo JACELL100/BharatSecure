@@ -29,6 +29,7 @@ import VRViewer from "./pages/VRViewer";
 import UploadPage from "./pages/UploadPage";
 import PhotoList from "./pages/PhotoList";
 import Chat from "./pages/Chat";
+import IncidentForecasting from "./pages/IncidentForecasting";
 import { LocationProvider } from "../src/context/LocationContext";
 
 const UserDashboard = lazy(() => import("./pages/UserDashboard"));
@@ -89,6 +90,7 @@ const App = () => {
                 <Route path="/view-details/:id" element={<ViewDetails />} />
                 <Route path="/feedback" element={<FeedbackForm />} />
                 <Route path="chatbot" element={<Chatbot />} />
+                <Route path="/forecasting" element={<IncidentForecasting />} />
                 <Route path="/incident/:id" element={<ViewDetails />} />
                 <Route path="/user/:userId" element={<UserProfile />} />
                 {/* Redirect all unknown routes to Home */}

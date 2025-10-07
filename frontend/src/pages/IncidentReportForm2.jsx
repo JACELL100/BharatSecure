@@ -252,7 +252,7 @@ const IncidentReportForm = () => {
                   <option value="Stray dogs / cattle on roads">
                     Stray dogs / cattle on roads
                   </option>
-                  {/* 
+                  
                   <option value="Domestic Violence">Domestic Violence</option>
                   <option value="Child Abuse">Child Abuse</option>
                   <option value="Sexual Harassment">Sexual Harassment</option>
@@ -262,7 +262,7 @@ const IncidentReportForm = () => {
                   <option value="Accident">Accident</option>
                   <option value="Theft">Theft</option>
                   <option value="Medical Emergency">Medical Emergency</option>
-                  */}
+                  
                   <option value="Other">Other</option>
                 </select>
               </div>
