@@ -34,6 +34,7 @@ urlpatterns = [
     path('api/send_email', views.send_email_example, name='send_email'),
     path('api/latest-incidents/', views.latest_incidents, name='latest-incidents'),
     path("api/user/<int:user_id>/", views.UserDetailView.as_view(), name="user-detail"),
+    path('pothole/', include('pothole_analyzer.urls')),
 ]
 
 '''path('report-incident/', views.post, name='report_incident'),'''
