@@ -1,10 +1,11 @@
-# pothole_analyzer/cv_service.py
 import cv2
 import numpy as np
 from PIL import Image
 import io
 from django.core.files.base import ContentFile
 from datetime import datetime
+import tempfile
+import os
 
 class PotholeAnalyzer:
     def __init__(self, reference_object_size_cm=None):
@@ -235,3 +236,225 @@ class PotholeAnalyzer:
         # Convert to bytes for saving
         _, buffer = cv2.imencode('.jpg', annotated)
         return ContentFile(buffer.tobytes(), name='processed.jpg')
+
+
+class PotholeVideoAnalyzer:
+    def __init__(self, reference_object_size_cm=None, frame_skip=5):
+        """
+        Initialize video analyzer
+        frame_skip: Analyze every Nth frame (default 5 for efficiency)
+        """
+        self.image_analyzer = PotholeAnalyzer(reference_object_size_cm)
+        self.frame_skip = frame_skip
+        self.detections = []
+    
+    def analyze_video(self, video_path, progress_callback=None):
+        """
+        Analyze video for potholes
+        progress_callback: Optional function(progress_percent) for tracking
+        Returns: dict with aggregate results and frame detections
+        """
+        cap = cv2.VideoCapture(video_path)
+        
+        if not cap.isOpened():
+            raise ValueError("Could not open video file")
+        
+        # Get video properties
+        fps = cap.get(cv2.CAP_PROP_FPS)
+        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        duration = total_frames / fps if fps > 0 else 0
+        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        
+        detections = []
+        frame_number = 0
+        frames_processed = 0
+        
+        # Temporary directory for frame images
+        temp_dir = tempfile.mkdtemp()
+        
+        # Video writer for processed video
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        temp_output = os.path.join(temp_dir, 'output.mp4')
+        out = cv2.VideoWriter(temp_output, fourcc, fps, (width, height))
+        
+        try:
+            while True:
+                ret, frame = cap.read()
+                if not ret:
+                    break
+                
+                timestamp = frame_number / fps if fps > 0 else 0
+                
+                # Process every Nth frame
+                if frame_number % self.frame_skip == 0:
+                    # Save frame temporarily
+                    temp_frame_path = os.path.join(temp_dir, f'frame_{frame_number}.jpg')
+                    cv2.imwrite(temp_frame_path, frame)
+                    
+                    # Analyze frame
+                    try:
+                        result = self.image_analyzer.analyze_image(temp_frame_path)
+                        
+                        if result:
+                            detection = {
+                                'frame_number': frame_number,
+                                'timestamp_seconds': round(timestamp, 2),
+                                'width_cm': result['width_cm'],
+                                'height_cm': result['height_cm'],
+                                'area_cm2': result['area_cm2'],
+                                'depth_estimate': result['depth_estimate'],
+                                'perimeter_cm': result['perimeter_cm'],
+                                'severity': result['severity'],
+                                'confidence_score': result['confidence_score'],
+                                'impact_score': result['impact_score'],
+                                'bounding_box': result['bounding_box'],
+                                'frame_path': temp_frame_path
+                            }
+                            detections.append(detection)
+                            
+                            # Annotate this frame
+                            annotated_frame = self._annotate_frame(frame, result)
+                            out.write(annotated_frame)
+                        else:
+                            out.write(frame)
+                    except Exception as e:
+                        print(f"Error analyzing frame {frame_number}: {str(e)}")
+                        out.write(frame)
+                    
+                    frames_processed += 1
+                    
+                    # Progress callback
+                    if progress_callback:
+                        progress = int((frame_number / total_frames) * 100)
+                        progress_callback(progress)
+                else:
+                    out.write(frame)
+                
+                frame_number += 1
+            
+        finally:
+            cap.release()
+            out.release()
+        
+        # Generate thumbnail (first frame with detection or first frame)
+        thumbnail_path = None
+        if detections:
+            thumbnail_path = detections[0]['frame_path']
+        elif frame_number > 0:
+            cap = cv2.VideoCapture(video_path)
+            ret, first_frame = cap.read()
+            if ret:
+                thumbnail_path = os.path.join(temp_dir, 'thumbnail.jpg')
+                cv2.imwrite(thumbnail_path, first_frame)
+            cap.release()
+        
+        # Calculate aggregate statistics
+        aggregate_stats = self._calculate_aggregate_stats(detections)
+        
+        return {
+            'video_metadata': {
+                'fps': fps,
+                'total_frames': total_frames,
+                'duration_seconds': round(duration, 2),
+                'frames_analyzed': frames_processed,
+                'width': width,
+                'height': height
+            },
+            'detections': detections,
+            'aggregate_stats': aggregate_stats,
+            'processed_video_path': temp_output,
+            'thumbnail_path': thumbnail_path,
+            'temp_dir': temp_dir
+        }
+    
+    def _annotate_frame(self, frame, analysis_result):
+        """Annotate a single frame with detection info"""
+        annotated = frame.copy()
+        
+        x, y, w, h = analysis_result['bounding_box']
+        
+        # Draw bounding box
+        cv2.rectangle(annotated, (x, y), (x + w, y + h), (0, 255, 0), 2)
+        
+        # Add severity label
+        severity_colors = {
+            'low': (0, 255, 0),
+            'medium': (0, 255, 255),
+            'high': (0, 165, 255),
+            'critical': (0, 0, 255)
+        }
+        color = severity_colors.get(analysis_result['severity'], (255, 255, 255))
+        
+        label = f"{analysis_result['severity'].upper()} - {analysis_result['area_cm2']:.0f}cm2"
+        cv2.putText(annotated, label, (x, y - 10), 
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
+        
+        return annotated
+    
+    def _calculate_aggregate_stats(self, detections):
+        """Calculate aggregate statistics from all detections"""
+        if not detections:
+            return {
+                'total_potholes': 0,
+                'average_severity': None,
+                'max_severity': None,
+                'average_area_cm2': 0,
+                'average_depth_cm': 0,
+                'total_estimated_cost': 0,
+                'severity_breakdown': {},
+                'timestamp_data': []
+            }
+        
+        # Severity ordering
+        severity_order = {'low': 1, 'medium': 2, 'high': 3, 'critical': 4}
+        
+        total_potholes = len(detections)
+        severities = [d['severity'] for d in detections]
+        areas = [d['area_cm2'] for d in detections]
+        depths = [d['depth_estimate'] for d in detections]
+        
+        # Severity breakdown
+        severity_breakdown = {}
+        for sev in severities:
+            severity_breakdown[sev] = severity_breakdown.get(sev, 0) + 1
+        
+        # Average severity (weighted)
+        avg_severity_score = sum(severity_order[s] for s in severities) / len(severities)
+        if avg_severity_score <= 1.5:
+            avg_severity = 'low'
+        elif avg_severity_score <= 2.5:
+            avg_severity = 'medium'
+        elif avg_severity_score <= 3.5:
+            avg_severity = 'high'
+        else:
+            avg_severity = 'critical'
+        
+        # Max severity
+        max_severity = max(severities, key=lambda x: severity_order[x])
+        
+        # Estimated total cost
+        total_cost = sum(50 + (d['area_cm2'] * 0.5) + (d['depth_estimate'] * 10) 
+                        for d in detections)
+        
+        # Timestamp data for timeline
+        timestamp_data = [
+            {
+                'timestamp': d['timestamp_seconds'],
+                'frame': d['frame_number'],
+                'severity': d['severity'],
+                'area': d['area_cm2']
+            }
+            for d in detections
+        ]
+        
+        return {
+            'total_potholes': total_potholes,
+            'average_severity': avg_severity,
+            'max_severity': max_severity,
+            'average_area_cm2': round(sum(areas) / len(areas), 2),
+            'average_depth_cm': round(sum(depths) / len(depths), 2),
+            'total_estimated_cost': round(total_cost, 2),
+            'severity_breakdown': severity_breakdown,
+            'timestamp_data': timestamp_data
+        }

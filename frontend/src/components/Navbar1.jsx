@@ -327,6 +327,7 @@ const Navbar = () => {
           { route: "/chatbot", label: "Saathi AI" },
           { route: "/upload", label: "VR Viewer" },
           { route: "/pothole", label: "Pothole Analyzer" },
+          { route: "/video", label: "Video Analysis" },
         ].map((item) => (
           <MenuItem
             key={item.route}

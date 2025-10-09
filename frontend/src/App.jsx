@@ -32,6 +32,7 @@ import Chat from "./pages/Chat";
 import IncidentForecasting from "./pages/IncidentForecasting";
 import PotholeAnalyzer from "./pages/PotholeAnalyzer";
 import { LocationProvider } from "../src/context/LocationContext";
+import VideoAnalysis from "./pages/VideoAnalysis";
 
 const UserDashboard = lazy(() => import("./pages/UserDashboard"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
@@ -93,6 +94,7 @@ const App = () => {
                 <Route path="chatbot" element={<Chatbot />} />
                 <Route path="/forecasting" element={<IncidentForecasting />} />
                 <Route path="/pothole" element={<PotholeAnalyzer />} />
+                <Route path="/video" element={<VideoAnalysis />} />
                 <Route path="/incident/:id" element={<ViewDetails />} />
                 <Route path="/user/:userId" element={<UserProfile />} />
                 {/* Redirect all unknown routes to Home */}
