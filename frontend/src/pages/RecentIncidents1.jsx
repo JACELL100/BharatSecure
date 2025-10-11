@@ -1,7 +1,7 @@
 import React, { useState, useEffect, lazy, Suspense, useRef } from "react";
 import axios from "axios";
 import { FaCommentDots } from "react-icons/fa";
-import { Loader2, AlertTriangle } from "lucide-react";
+import { Loader2, AlertTriangle, Wallet } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import Footer from "@/components/Footer";
 import FloatingChatbot from "@/components/FloatingChatbot";
@@ -36,6 +36,11 @@ const RecentIncidents = () => {
   const API_HOST = import.meta.env.VITE_API_HOST;
   const API_URL = import.meta.env.VITE_API_URL;
 
+  // MetaMask state
+  const [walletAddress, setWalletAddress] = useState(null);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [walletError, setWalletError] = useState(null);
+
   // Refs for map and data
   const mapRef = useRef(null);
   const markerRef = useRef(null);
@@ -45,6 +50,78 @@ const RecentIncidents = () => {
   useEffect(() => {
     incidentsRef.current = incidents;
   }, [incidents]);
+
+  // Check if MetaMask is already connected on component mount
+  useEffect(() => {
+    checkIfWalletIsConnected();
+  }, []);
+
+  const checkIfWalletIsConnected = async () => {
+    try {
+      if (typeof window.ethereum !== 'undefined') {
+        const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+        if (accounts.length > 0) {
+          setWalletAddress(accounts[0]);
+        }
+      }
+    } catch (error) {
+      console.error("Error checking wallet connection:", error);
+    }
+  };
+
+  const connectWallet = async () => {
+    setIsConnecting(true);
+    setWalletError(null);
+
+    try {
+      if (typeof window.ethereum === 'undefined') {
+        setWalletError("MetaMask is not installed. Please install MetaMask to continue.");
+        setIsConnecting(false);
+        return;
+      }
+
+      const accounts = await window.ethereum.request({
+        method: 'eth_requestAccounts'
+      });
+
+      if (accounts.length > 0) {
+        setWalletAddress(accounts[0]);
+      }
+    } catch (error) {
+      console.error("Error connecting wallet:", error);
+      if (error.code === 4001) {
+        setWalletError("Connection rejected. Please approve the connection request.");
+      } else {
+        setWalletError("Failed to connect wallet. Please try again.");
+      }
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
+  const disconnectWallet = () => {
+    setWalletAddress(null);
+  };
+
+  // Listen for account changes
+  useEffect(() => {
+    if (typeof window.ethereum !== 'undefined') {
+      const handleAccountsChanged = (accounts) => {
+        if (accounts.length === 0) {
+          setWalletAddress(null);
+        } else {
+          setWalletAddress(accounts[0]);
+        }
+      };
+
+      window.ethereum.on('accountsChanged', handleAccountsChanged);
+
+      return () => {
+        window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
+      };
+    }
+  }, []);
+
   // Initialize map when modal opens
   useEffect(() => {
     if (!isMapModalOpen) return;
@@ -70,8 +147,8 @@ const RecentIncidents = () => {
 
         const filteredIncidents = originalIncidents.filter((incident) => {
           const distance = getDistanceFromLatLonInKm(
-            lat, // previously: latitudeOrLat
-            lng, // previously: longitudeOrLng
+            lat,
+            lng,
             incident.location.latitude,
             incident.location.longitude
           );
@@ -95,6 +172,8 @@ const RecentIncidents = () => {
 
   // Fetch incidents from backend
   useEffect(() => {
+    if (!walletAddress) return;
+
     const fetchIncidents = async () => {
       try {
         setLoading(true);
@@ -115,7 +194,7 @@ const RecentIncidents = () => {
       }
     };
     fetchIncidents();
-  }, []);
+  }, [walletAddress]);
 
   // Distance calculation helpers
   const deg2rad = (deg) => deg * (Math.PI / 180);
@@ -169,11 +248,98 @@ const RecentIncidents = () => {
     }));
   };
 
+  // If wallet is not connected, show connect screen
+  if (!walletAddress) {
+    return (
+      <div className="min-h-screen relative overflow-hidden">
+        <AnimatedBackground animationName="cosmicDust" blendMode="normal" />
+        
+        <div className="container mx-auto px-4 py-10 relative z-10 flex items-center justify-center min-h-screen">
+          <div className="max-w-md w-full bg-gradient-to-br from-slate-800/90 to-slate-900/90 backdrop-blur-lg rounded-2xl p-8 shadow-[0_0_40px_rgba(34,211,238,0.3)] border border-cyan-400/20">
+            <div className="text-center mb-8">
+              <Wallet className="mx-auto mb-4 text-cyan-400" size={64} />
+              <h1 className="text-3xl font-extrabold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent mb-2">
+                Connect Your Wallet
+              </h1>
+              <p className="text-gray-400">
+                Please connect your MetaMask wallet to access recent incidents
+              </p>
+            </div>
+
+            {walletError && (
+              <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-lg flex items-start gap-3">
+                <AlertTriangle className="text-red-400 flex-shrink-0 mt-0.5" size={20} />
+                <p className="text-red-400 text-sm">{walletError}</p>
+              </div>
+            )}
+
+            <button
+              onClick={connectWallet}
+              disabled={isConnecting}
+              className="w-full px-6 py-4 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-xl 
+                shadow-[0_0_20px_rgba(34,211,238,0.4)] 
+                hover:shadow-[0_0_30px_rgba(34,211,238,0.6)] 
+                hover:from-cyan-400 hover:to-blue-400
+                transition-all duration-300
+                font-bold text-lg
+                disabled:opacity-50 disabled:cursor-not-allowed
+                flex items-center justify-center gap-3"
+            >
+              {isConnecting ? (
+                <>
+                  <Loader2 className="animate-spin" size={24} />
+                  Connecting...
+                </>
+              ) : (
+                <>
+                  <Wallet size={24} />
+                  Connect MetaMask
+                </>
+              )}
+            </button>
+
+            {typeof window.ethereum === 'undefined' && (
+              <div className="mt-6 text-center">
+                <p className="text-gray-400 text-sm mb-3">Don't have MetaMask?</p>
+                <a
+                  href="https://metamask.io/download/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-cyan-400 hover:text-cyan-300 underline text-sm"
+                >
+                  Install MetaMask Extension
+                </a>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <Footer />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen relative overflow-hidden">
       <AnimatedBackground animationName="cosmicDust" blendMode="normal" />
 
       <div className="container mx-auto px-4 py-10 relative z-10">
+        {/* Wallet Info Bar */}
+        <div className="flex justify-end mb-6">
+          <div className="bg-slate-800/90 backdrop-blur-sm rounded-xl px-4 py-2 border border-cyan-400/20 flex items-center gap-3">
+            <Wallet className="text-cyan-400" size={20} />
+            <span className="text-cyan-400 font-mono text-sm">
+              {walletAddress.substring(0, 6)}...{walletAddress.substring(38)}
+            </span>
+            <button
+              onClick={disconnectWallet}
+              className="text-red-400 hover:text-red-300 text-sm font-semibold transition-colors"
+            >
+              Disconnect
+            </button>
+          </div>
+        </div>
+
         <h1 className="text-center font-extrabold text-3xl sm:text-4xl lg:text-5xl mb-12 bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent drop-shadow-[0_0_15px_rgba(34,211,238,0.4)]">
           Recently Reported Incidents
         </h1>
@@ -182,12 +348,12 @@ const RecentIncidents = () => {
           <button
             onClick={handleLocationFilter}
             className="px-6 py-3 bg-slate-800 text-cyan-400 rounded-xl 
-    shadow-[inset_-2px_-2px_4px_rgba(0,0,0,0.3),inset_2px_2px_4px_rgba(255,255,255,0.1)] 
-    hover:shadow-[0_0_15px_rgba(34,211,238,0.3)] 
-    hover:text-cyan-300
-    transition-all duration-300
-    font-semibold
-    border border-cyan-400/20"
+              shadow-[inset_-2px_-2px_4px_rgba(0,0,0,0.3),inset_2px_2px_4px_rgba(255,255,255,0.1)] 
+              hover:shadow-[0_0_15px_rgba(34,211,238,0.3)] 
+              hover:text-cyan-300
+              transition-all duration-300
+              font-semibold
+              border border-cyan-400/20"
           >
             Filter by My Location
           </button>
@@ -195,12 +361,12 @@ const RecentIncidents = () => {
           <button
             onClick={() => setIsMapModalOpen(true)}
             className="px-6 py-3 bg-slate-800 text-cyan-400 rounded-xl 
-    shadow-[inset_-2px_-2px_4px_rgba(0,0,0,0.3),inset_2px_2px_4px_rgba(255,255,255,0.1)] 
-    hover:shadow-[0_0_15px_rgba(34,211,238,0.3)] 
-    hover:text-cyan-300
-    transition-all duration-300
-    font-semibold
-    border border-cyan-400/20"
+              shadow-[inset_-2px_-2px_4px_rgba(0,0,0,0.3),inset_2px_2px_4px_rgba(255,255,255,0.1)] 
+              hover:shadow-[0_0_15px_rgba(34,211,238,0.3)] 
+              hover:text-cyan-300
+              transition-all duration-300
+              font-semibold
+              border border-cyan-400/20"
           >
             Pick Location on Map
           </button>
