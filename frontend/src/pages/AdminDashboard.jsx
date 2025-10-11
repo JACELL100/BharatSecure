@@ -35,16 +35,13 @@ const AdminDashboard = () => {
 
   const getincidents = async () => {
     try {
-      const response = await fetch(
-        `${API_URL}/api/all_station_incidents/`,
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const response = await fetch(`${API_URL}/api/all_station_incidents/`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
 
       if (response.ok) {
         const incidentData = await response.json();
@@ -97,18 +94,14 @@ const AdminDashboard = () => {
   }, [incidents]);
 
   useEffect(() => {
-    const newIncidentList = incidents.filter(
-      (incident) => incident.status === "submitted"
-    );
+    const newIncidentList = incidents.filter((incident) => incident.status === "submitted");
     setNewTasks(newIncidentList);
   }, [incidents]);
 
   useEffect(() => {
     const filteredIncidents = incidents.filter((incident) => {
       if (filter === "All") {
-        return (
-          incident.status !== "submitted" && incident.status !== "Resolved"
-        );
+        return incident.status !== "submitted" && incident.status !== "Resolved";
       }
       return (
         incident.severity === filter.toLowerCase() &&
@@ -126,15 +119,12 @@ const AdminDashboard = () => {
 
   const fetchFlaggedIncidents = async () => {
     try {
-      const response = await fetch(
-        `${API_URL}/api/all_station_incidents/`,
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const response = await fetch(`${API_URL}/api/all_station_incidents/`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       if (response.ok) {
         const data = await response.json();
@@ -154,16 +144,13 @@ const AdminDashboard = () => {
 
   const handleNewTask = async (id) => {
     try {
-      const response = await fetch(
-        `${API_URL}/api/update_incident/${id}/`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ status: "under investigation" }),
-        }
-      );
+      const response = await fetch(`${API_URL}/api/update_incident/${id}/`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ status: "under investigation" }),
+      });
 
       if (response.ok) {
         getincidents();
@@ -177,16 +164,13 @@ const AdminDashboard = () => {
 
   const handleMarkAsCompleted = async (id) => {
     try {
-      const response = await fetch(
-        `${API_URL}/api/update_incident/${id}/`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ status: "Resolved" }),
-        }
-      );
+      const response = await fetch(`${API_URL}/api/update_incident/${id}/`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ status: "Resolved" }),
+      });
 
       if (response.ok) {
         getincidents();
@@ -199,31 +183,23 @@ const AdminDashboard = () => {
   };
 
   useEffect(() => {
-    const completedmarked = incidents.filter(
-      (incident) => incident.status === "Resolved"
-    );
-
+    const completedmarked = incidents.filter((incident) => incident.status === "Resolved");
     setCompletedId(completedmarked);
   }, [filter, incidents]);
 
   const handleFalseReport = async (id) => {
     try {
-      const response = await fetch(
-        `${API_URL}/api/all_station_incidents/`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ incident_id: id }),
-        }
-      );
+      const response = await fetch(`${API_URL}/api/all_station_incidents/`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ incident_id: id }),
+      });
 
       if (response.ok) {
-        setIncidents((prevIncidents) =>
-          prevIncidents.filter((incident) => incident.id !== id)
-        );
+        setIncidents((prevIncidents) => prevIncidents.filter((incident) => incident.id !== id));
         alert("Report marked as False and removed from the list");
       } else {
         console.error("Failed to mark report as false");
@@ -233,12 +209,11 @@ const AdminDashboard = () => {
     }
   };
 
-  // Incident Card Component for consistent styling
   const IncidentCard = ({ incident, type = "default" }) => {
     const isNew = type === "new";
     const isCompleted = type === "completed";
     const isFlagged = type === "flagged";
-    
+
     let step = 0;
     if (incident?.status?.toLowerCase() === "resolved") {
       step = 2;
@@ -246,31 +221,37 @@ const AdminDashboard = () => {
       step = 1;
     }
 
-    const borderClass = isCompleted 
-      ? "border-green-500" 
-      : isFlagged 
-      ? "border-red-500" 
-      : `border ${getSeverityColor(incident.severity).split(' ')[1]}`;
+    const borderClass = isCompleted
+      ? "border-green-500"
+      : isFlagged
+      ? "border-red-500"
+      : `border ${getSeverityColor(incident.severity).split(" ")[1]}`;
 
-    const bgClass = isCompleted 
-      ? "bg-green-500/5" 
-      : isFlagged 
-      ? "bg-red-500/5" 
+    const bgClass = isCompleted
+      ? "bg-green-500/5"
+      : isFlagged
+      ? "bg-red-500/5"
       : `bg-white/5`;
 
     return (
-      <div className={`p-4 md:p-6 rounded-2xl ${bgClass} border ${borderClass} shadow-lg transition-all hover:scale-[1.02] w-full h-full flex flex-col`}>
+      <div
+        className={`p-4 md:p-6 rounded-2xl ${bgClass} border ${borderClass} shadow-lg transition-all hover:scale-[1.02] w-full h-full flex flex-col`}
+      >
         {incident.count > 1 && (
           <div className="text-lg md:text-xl font-bold text-red-500 text-center mb-3 animate-pulse">
             {isNew ? "Multiple Reports!!" : "Mass Report!!"}
           </div>
         )}
-        
+
         <div className="flex justify-between items-center mb-4">
-          <span className={`px-3 py-1 rounded-full font-bold text-sm md:text-base ${getSeverityColor(incident.severity)}`}>
+          <span
+            className={`px-3 py-1 rounded-full font-bold text-sm md:text-base ${getSeverityColor(
+              incident.severity
+            )}`}
+          >
             {incident.severity?.charAt(0).toUpperCase() + incident.severity?.slice(1)}
           </span>
-          
+
           {isCompleted ? (
             <div className="px-3 py-1 border-2 rounded-lg border-green-400 text-green-300 font-bold text-sm">
               Completed
@@ -279,16 +260,14 @@ const AdminDashboard = () => {
             <div className="px-3 py-1 border-2 rounded-lg border-red-400 text-red-300 font-bold text-sm">
               Flagged
             </div>
+          ) : falseReport.some((report) => report.incidentid === incident.id) ? (
+            <MdReport className="text-2xl md:text-3xl text-red-500 cursor-pointer" title="Marked as False Report" />
           ) : (
-            falseReport.some((report) => report.incidentid === incident.id) ? (
-              <MdReport className="text-2xl md:text-3xl text-red-500 cursor-pointer" title="Marked as False Report" />
-            ) : (
-              <MdOutlineReport
-                onClick={() => handleFalseReport(incident.id)}
-                className="text-2xl md:text-3xl text-white hover:text-red-500 cursor-pointer transition-colors"
-                title="Mark as False Report"
-              />
-            )
+            <MdOutlineReport
+              onClick={() => handleFalseReport(incident.id)}
+              className="text-2xl md:text-3xl text-white hover:text-red-500 cursor-pointer transition-colors"
+              title="Mark as False Report"
+            />
           )}
         </div>
 
@@ -296,14 +275,10 @@ const AdminDashboard = () => {
           <h3 className="text-base md:text-lg font-semibold text-white line-clamp-1">
             {incident.incidentType}
           </h3>
-          <p className="text-white font-bold text-sm md:text-base">
-            ID: #{incident.id}
-          </p>
+          <p className="text-white font-bold text-sm md:text-base">ID: #{incident.id}</p>
         </div>
 
-        <p className="text-gray-300 text-sm mb-3 line-clamp-3 flex-grow">
-          {incident.description}
-        </p>
+        <p className="text-gray-300 text-sm mb-3 line-clamp-3 flex-grow">{incident.description}</p>
 
         <div className="mb-3">
           <p className="text-gray-300 text-sm">
@@ -312,9 +287,7 @@ const AdminDashboard = () => {
               {incident.reported_by?.first_name || "Unknown"} {incident.reported_by?.last_name || ""}
             </span>
           </p>
-          <p className="text-gray-300 text-sm">
-            User Score: {incident.score}
-          </p>
+          <p className="text-gray-300 text-sm">User Score: {incident.score}</p>
         </div>
 
         <div className="flex items-center mb-4">
@@ -363,14 +336,14 @@ const AdminDashboard = () => {
                       <p className="text-white mb-4 text-sm">
                         Start a conversation to discuss this incident.
                       </p>
-                     <div className="flex justify-end">
-  <button 
-    className="px-4 py-2 bg-sky-500 text-white rounded hover:bg-sky-600 transition text-sm"
-    onClick={() => navigate('/chat')}
-  >
-    Start Chat
-  </button>
-</div>
+                      <div className="flex justify-end">
+                        <button
+                          className="px-4 py-2 bg-sky-500 text-white rounded hover:bg-sky-600 transition text-sm"
+                          onClick={() => navigate("/chat")}
+                        >
+                          Start Chat
+                        </button>
+                      </div>
                     </div>
                   </PopoverContent>
                 </Popover>
@@ -384,7 +357,7 @@ const AdminDashboard = () => {
                   </button>
                 )}
               </div>
-              
+
               <button
                 className="bg-gray-700 hover:bg-gray-800 text-white px-3 py-2 rounded-lg w-full transition-all text-sm"
                 onClick={() => navigate(`/view-details/${incident.id}`)}
@@ -416,7 +389,6 @@ const AdminDashboard = () => {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
-          {/* Total Incidents Card */}
           <div className="bg-white/5 p-4 md:p-6 rounded-2xl cursor-pointer border-2 border-red-500 shadow-lg transition-all hover:scale-105 flex items-center justify-between group">
             <div>
               <h3 className="text-gray-400 font-medium mb-1 text-sm md:text-base">
@@ -427,7 +399,6 @@ const AdminDashboard = () => {
             <AlertTriangle className="text-red-400 w-8 h-8 md:w-12 md:h-12 group-hover:scale-110 transition-transform" />
           </div>
 
-          {/* Resolved Incidents Card */}
           <div className="bg-white/5 cursor-pointer p-4 md:p-6 rounded-2xl border-2 border-green-500 shadow-lg transition-all hover:scale-105 flex items-center justify-between group">
             <div>
               <h3 className="text-gray-400 font-medium mb-1 text-sm md:text-base">Resolved</h3>
@@ -436,7 +407,6 @@ const AdminDashboard = () => {
             <CheckCircle2 className="text-emerald-400 w-8 h-8 md:w-12 md:h-12 group-hover:scale-110 transition-transform" />
           </div>
 
-          {/* Unresolved Incidents Card */}
           <div className="bg-white/5 p-4 md:p-6 cursor-pointer rounded-2xl border-2 border-yellow-500 shadow-lg transition-all hover:scale-105 flex items-center justify-between group">
             <div>
               <h3 className="text-gray-400 font-medium mb-1 text-sm md:text-base">Unresolved</h3>
@@ -469,9 +439,12 @@ const AdminDashboard = () => {
           <h1 className="text-2xl md:text-3xl lg:text-4xl font-semibold text-white mb-4 text-center md:text-left">
             Accepted Incidents
           </h1>
-          
+
           <div className="mb-6 flex flex-col md:flex-row items-start md:items-center gap-2 md:gap-4">
-            <label htmlFor="severity-filter" className="text-gray-200 font-medium text-sm md:text-base">
+            <label
+              htmlFor="severity-filter"
+              className="text-gray-200 font-medium text-sm md:text-base"
+            >
               Filter by Severity:
             </label>
             <select
@@ -510,15 +483,23 @@ const AdminDashboard = () => {
 
         {/* Flagged Incidents */}
         {flaggedIncidents.length > 0 && (
-          <div className="mb-10 md:mb-14">
+          <div className="mb-10 md:mb-14 text-center">
             <h1 className="text-2xl md:text-3xl lg:text-4xl font-semibold text-red-500 mb-6 text-center md:text-left">
               Flagged Incidents
             </h1>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-6">
               {flaggedIncidents.map((incident) => (
                 <IncidentCard key={incident.id} incident={incident} type="flagged" />
               ))}
             </div>
+
+            {/* 🚀 Forecasting Button Added Here */}
+            <button
+              onClick={() => navigate("/forecasting")}
+              className="px-6 py-3 bg-sky-500 hover:bg-sky-600 text-white rounded-xl text-lg font-semibold shadow-lg transition-all hover:scale-105"
+            >
+              Forecasting
+            </button>
           </div>
         )}
 
