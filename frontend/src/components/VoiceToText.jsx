@@ -144,6 +144,8 @@ const VoiceInput = () => {
     if (!recognitionRef.current) return;
     setIsListening(true);
     setIsStopped(false);
+    setError(null); // Clear any previous errors
+    setSuccess(false); // Clear any previous success messages
     recognitionRef.current.start();
   };
 
@@ -166,34 +168,122 @@ const VoiceInput = () => {
     setSuccess(false);
     
     try {
-      const extractedData = {
-        user_input: text,
-        latitude: 19.086179097586797, //hard coded
-        longitude: 72.83292917653831
+      // Get user's current location
+      const getCurrentLocation = () => {
+        return new Promise((resolve, reject) => {
+          if (!navigator.geolocation) {
+            reject(new Error("Geolocation is not supported by this browser"));
+            return;
+          }
+          
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              resolve({
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude
+              });
+            },
+            (error) => {
+              // If location access is denied, use default Mumbai coordinates
+              console.warn("Location access denied, using default coordinates");
+              resolve({
+                latitude: 19.0760,
+                longitude: 72.8777
+              });
+            },
+            {
+              enableHighAccuracy: true,
+              timeout: 10000,
+              maximumAge: 300000
+            }
+          );
+        });
       };
 
-      await axios.post(
+      const location = await getCurrentLocation();
+      
+      const extractedData = {
+        user_input: text,
+        latitude: location.latitude,
+        longitude: location.longitude
+      };
+
+      console.log("Sending data to backend:", extractedData);
+      console.log("Making request to: http://127.0.0.1:8000/api/voice-report/");
+
+      // First, test if backend is reachable
+      console.log("Testing backend connectivity...");
+      try {
+        await axios.get("http://127.0.0.1:8000/api/latest-incidents/");
+        console.log("Backend is reachable");
+      } catch (connectError) {
+        console.error("Backend connectivity test failed:", connectError);
+        throw new Error("Cannot connect to backend. Please ensure the Django server is running on http://127.0.0.1:8000");
+      }
+
+      const response = await axios.post(
         "http://127.0.0.1:8000/api/voice-report/",
         extractedData
       );
 
+      console.log("Backend response:", response.data);
+
       setSuccess(true);
       setText(""); // Reset transcript manually
+      setIsStopped(false); // Reset the stopped state
       alert("Incident submitted successfully!");
     } catch (err) {
-      setError("Failed to process the incident. Please try again.");
-      console.error(err);
+      console.error("Full error object:", err);
+      console.error("Error response:", err.response);
+      console.error("Error response data:", err.response?.data);
+      console.error("Error status:", err.response?.status);
+      
+      // Handle different types of errors
+      let errorMessage = "Failed to process the incident. Please try again.";
+      
+      if (err.response) {
+        // Server responded with error status
+        const statusCode = err.response.status;
+        const responseData = err.response.data;
+        
+        console.log("Server response status:", statusCode);
+        console.log("Server response data:", responseData);
+        
+        if (responseData) {
+          if (responseData.error) {
+            errorMessage = `Server Error: ${responseData.error}`;
+          } else if (responseData.message) {
+            errorMessage = `Server Message: ${responseData.message}`;
+          } else if (typeof responseData === 'string') {
+            errorMessage = `Server Response: ${responseData}`;
+          } else {
+            errorMessage = `Server Error (${statusCode}): ${JSON.stringify(responseData)}`;
+          }
+        } else {
+          errorMessage = `Server Error: HTTP ${statusCode}`;
+        }
+      } else if (err.request) {
+        // Request was made but no response received
+        console.error("No response received:", err.request);
+        errorMessage = "No response from server. Please check if the backend is running on http://127.0.0.1:8000";
+      } else {
+        // Something else happened
+        errorMessage = `Request Error: ${err.message}`;
+      }
+      
+      setError(errorMessage);
+      console.log("Final error message:", errorMessage);
+    } finally {
       setLoadingSpinner(false);
-      // alert(err.response.data.error);
-      alert("Please specify your location details too");
+      setLoading(false);
     }
-    setLoadingSpinner(false);
-    setLoading(false);
   };
 
   const reRecord = () => {
     setText(""); // Clear the text
     setIsStopped(false);
+    setError(null); // Clear any previous errors
+    setSuccess(false); // Clear any previous success messages
     startListening(); // Restart listening
   };
 
@@ -280,12 +370,26 @@ const VoiceInput = () => {
               </div>
             </div>
 
+            {/* Error Display */}
+            {error && (
+              <div className="mb-4 p-4 bg-red-900/20 border border-red-500/50 rounded-xl">
+                <p className="text-red-400 text-sm">{error}</p>
+              </div>
+            )}
+
+            {/* Success Display */}
+            {success && (
+              <div className="mb-4 p-4 bg-green-900/20 border border-green-500/50 rounded-xl">
+                <p className="text-green-400 text-sm">Incident submitted successfully!</p>
+              </div>
+            )}
+
             {/* Voice Input Display */}
             <div className="mb-6">
               <textarea
                 value={text}
                 onChange={(e) => setText(e.target.value)}
-                placeholder="Please describe the incident clearly. Include details like the type of incident, location, time, and any relevant observations."
+                placeholder="Please describe the incident clearly. Include details like the type of incident, location, time, and any relevant observations. Make sure to mention the location in your description for better accuracy."
                 className="w-full bg-slate-900/50 text-gray-200 px-4 py-3 rounded-xl border border-slate-600 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 shadow-[inset_2px_2px_8px_rgba(0,0,0,0.3)] min-h-[120px] resize-none"
                 rows="4"
               />
