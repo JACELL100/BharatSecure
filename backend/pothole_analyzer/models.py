@@ -27,6 +27,9 @@ class PotholeAnalysis(models.Model):
     
     # Location & Impact
     location = models.CharField(max_length=255, null=True, blank=True)
+    latitude = models.FloatField(null=True, blank=True, help_text="GPS latitude coordinate")
+    longitude = models.FloatField(null=True, blank=True, help_text="GPS longitude coordinate") 
+    location_accuracy = models.FloatField(null=True, blank=True, help_text="GPS accuracy in meters")
     impact_score = models.IntegerField(null=True, blank=True, help_text="1-10 scale")
     repair_priority = models.IntegerField(null=True, blank=True, help_text="1-5 scale")
     estimated_repair_cost = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
