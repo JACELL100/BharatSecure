@@ -81,7 +81,7 @@ from datetime import timedelta
 
 model = ChatGoogleGenerativeAI(
                 model="gemini-2.0-flash",
-                api_key="AIzaSyAETFSbgTrNR880OCUd_MUOCuxs88Vgzwo",
+                api_key="AIzaSyCKE2zTu0pMUnh42p4tYiNeheACg5Ns-zo",
                 max_retries=3,
                 retry_wait_strategy=wait_exponential(multiplier=1, min=4, max=10)
             )
@@ -1580,7 +1580,7 @@ import google.generativeai as genai
 import json
 
 # Configure Gemini API
-genai.configure(api_key="AIzaSyAETFSbgTrNR880OCUd_MUOCuxs88Vgzwo")
+genai.configure(api_key="AIzaSyCKE2zTu0pMUnh42p4tYiNeheACg5Ns-zo")
 
 @api_view(['GET'])
 def incident_forecast(request):
