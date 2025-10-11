@@ -497,21 +497,39 @@ class voicereport(APIView):
             ('system', """
                 Analyze the provided incident report and return a structured JSON response that strictly follows the given format.
                 
-                - Preserve all field names exactly as in the provided example.
-                - Ensure values are correctly formatted based on the input.
-                - Determine the severity level as 'high', 'medium', or 'low' based on the incident details.
-                - Extract any location information from the user input if present
-                - Do not add, remove, or modify any fields.
-                - Ensure the response is a valid JSON object.
+                CRITICAL REQUIREMENTS:
+                - Use ONLY these valid incident types (choose the closest match): 
+                  "Pothole/Road Damage", "Water Pipe Burst", "Overflowing Trash Bins", "Illegal Dumping", 
+                  "Broken streetlights / lack of lighting", "Voltage fluctuations in homes", 
+                  "Traffic signal not working", "Overcrowded buses / irregular transport", 
+                  "Stray dogs / cattle on roads", "Domestic Violence", "Child Abuse", 
+                  "Sexual Harassment", "Stalking", "Human Trafficking", "Fire", "Theft", 
+                  "Accident", "Injury", "Missing Persons", "Natural Disaster", 
+                  "Medical Emergency", "Other"
+                
+                - If the incident doesn't clearly match any category, use "Other"
+                - Severity must be exactly: "high", "medium", or "low" 
+                - Extract location information from the user input if present
+                - Preserve all field names exactly as in the provided example
+                - Return only valid JSON format
+                
+                MAPPING EXAMPLES:
+                - Assault, Violence, Fighting → "Other" (or "Domestic Violence" if domestic)
+                - Car crash, collision → "Accident" 
+                - Robbery, burglary → "Theft"
+                - Medical issue, health emergency → "Medical Emergency"
+                - Road problems, potholes → "Pothole/Road Damage"
             """),
             ('human', "Expected JSON format: {json_format}"),
+            ('human', "Valid incident types: {valid_types}"),
             ('human', "Incident details: {user_input}")
         ])
         self.chain = self.prompt | self.llm | StrOutputParser()
 
     def post(self, request, *args, **kwargs):
         # Authenticate user
-        print("function started")
+        print("=== Voice Report Function Started ===")
+        print(f"Request data: {request.data}")
         user = None
         auth_header = request.META.get('HTTP_AUTHORIZATION')
         if auth_header and auth_header.startswith('Bearer '):
@@ -527,6 +545,17 @@ class voicereport(APIView):
                 email='anonymous@example.com',
                 defaults={'first_name': 'Anonymous', 'last_name': 'User', 'phone_number': '0000000000'}
             )
+        # Define valid choices for the LLM
+        valid_incident_types = [
+            "Pothole/Road Damage", "Water Pipe Burst", "Overflowing Trash Bins", "Illegal Dumping", 
+            "Broken streetlights / lack of lighting", "Voltage fluctuations in homes", 
+            "Traffic signal not working", "Overcrowded buses / irregular transport", 
+            "Stray dogs / cattle on roads", "Domestic Violence", "Child Abuse", 
+            "Sexual Harassment", "Stalking", "Human Trafficking", "Fire", "Theft", 
+            "Accident", "Injury", "Missing Persons", "Natural Disaster", 
+            "Medical Emergency", "Other"
+        ]
+        
         json_format = """{
             "incidentType": "Accident",
             "location": "A-201, Shubham CHS, Gaurav garden complex 2, Kandivali West, Mumbai",
@@ -538,16 +567,37 @@ class voicereport(APIView):
         latitude = request.data.get("latitude", "")
         longitude = request.data.get("longitude", "")
         
+        print(f"Extracted data - user_input: '{user_input}', latitude: {latitude}, longitude: {longitude}")
+        
         if not user_input:
+            print("ERROR: user_input is empty")
             return Response({"error": "user_input is required"}, status=status.HTTP_400_BAD_REQUEST)
 
         # First, get the incident details from LLM without providing coordinates
-        chain_input = {"user_input": user_input, "json_format": json_format}
-        incident = self.chain.invoke(chain_input)
-        match = re.search(r'\{.*\}', incident, re.DOTALL)
-        if match:
-            json_string = match.group()
-            incident = json.loads(json_string)
+        try:
+            print("=== Calling LLM Chain ===")
+            valid_types_str = ", ".join([f'"{t}"' for t in valid_incident_types])
+            chain_input = {
+                "user_input": user_input, 
+                "json_format": json_format,
+                "valid_types": valid_types_str
+            }
+            print(f"Chain input: {chain_input}")
+            incident = self.chain.invoke(chain_input)
+            print(f"LLM raw response: {incident}")
+            
+            match = re.search(r'\{.*\}', incident, re.DOTALL)
+            if match:
+                json_string = match.group()
+                print(f"Extracted JSON string: {json_string}")
+                incident = json.loads(json_string)
+                print(f"Parsed incident data: {incident}")
+            else:
+                print("ERROR: No JSON found in LLM response")
+                return Response({"error": "Failed to parse incident data from AI response"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except Exception as e:
+            print(f"ERROR in LLM processing: {str(e)}")
+            return Response({"error": f"AI processing error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
         if 'error' in incident:
             return Response(incident, status=status.HTTP_400_BAD_REQUEST)
