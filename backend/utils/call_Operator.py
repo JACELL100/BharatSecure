@@ -1,7 +1,7 @@
-from langchain.prompts import ChatPromptTemplate
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain.schema.output_parser import StrOutputParser
-from langchain.schema.runnable import RunnableLambda
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_groq import ChatGroq
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.runnables import RunnableLambda
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from typing import List, Dict
 import logging
@@ -16,7 +16,7 @@ class EmergencyHelplineBot:
         # Initialize chat history and model
         self.chat_history: List = []
         try:
-            self.model = ChatGoogleGenerativeAI(model='gemini-1.5-pro', api_key='AIzaSyDv7RThoILjeXAryluncDRZ1QeFxAixR7Q')
+            self.model = ChatGroq(model='llama-3.1-8b-instant', api_key='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')
         except Exception as e:
             logger.error(f"Failed to initialize model: {str(e)}")
             raise

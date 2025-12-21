@@ -24,10 +24,10 @@ from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
 import logging
 logger = logging.getLogger(__name__)
 from rest_framework import generics, status
-from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_groq import ChatGroq
 from rest_framework import viewsets, status
-from langchain.schema.output_parser import StrOutputParser
+from langchain_core.output_parsers import StrOutputParser
 from rest_framework.parsers import JSONParser
 from tenacity import wait_exponential
 from django.core.cache import cache
@@ -79,11 +79,11 @@ from django.db.models.functions import (
 from django.utils import timezone
 from datetime import timedelta
 
-model = ChatGoogleGenerativeAI(
-                model="gemini-2.0-flash",
-                api_key="AIzaSyCKE2zTu0pMUnh42p4tYiNeheACg5Ns-zo",
+model = ChatGroq(
+                model="llama-3.1-8b-instant",
+                api_key="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",
                 max_retries=3,
-                retry_wait_strategy=wait_exponential(multiplier=1, min=4, max=10)
+                temperature=0.7
             )
 
 @api_view(['GET'])
@@ -95,42 +95,48 @@ def latest_incidents(request):
 class SignUpView(APIView):
     def post(self, request):
         data = request.data
+        print(f"Sign up request data: {data}")
 
-        # Validate required fields
+        # Validate required fields (emergency contacts are optional)
         required_fields = [
             "firstName", "lastName", "email", "phoneNumber",
-            "address", "aadharNumber", "emergencyContact1",
-            "emergencyContact2", "password"
+            "address", "aadharNumber", "password"
         ]
         for field in required_fields:
             if not data.get(field):
+                print(f"Missing required field: {field}")
                 return Response({field: f"{field} is required"}, status=status.HTTP_400_BAD_REQUEST)
 
         # Check for unique constraints
         if User.objects.filter(email=data["email"]).exists():
             return Response({"email": "Email already exists"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if User.objects.filter(phone_number=data["phoneNumber"]).exists():
+            return Response({"phoneNumber": "Phone number already exists"}, status=status.HTTP_400_BAD_REQUEST)
+            
+        if User.objects.filter(aadhar_number=data["aadharNumber"]).exists():
+            return Response({"aadharNumber": "Aadhar number already exists"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Save user
+        # Save user using the custom manager
         try:
-            user = User.objects.create(
+            user = User.objects.create_user(
+                email=data["email"],
+                password=data["password"],
                 first_name=data["firstName"],
                 last_name=data["lastName"],
-                email=data["email"],  # Use email as username
-                password=make_password(data["password"])  # Hash the password
+                phone_number=data["phoneNumber"],
+                address=data["address"],
+                aadhar_number=data["aadharNumber"],
+                emergency_contact1=data.get("emergencyContact1", ""),  # Optional field with default
+                emergency_contact2=data.get("emergencyContact2", "")   # Optional field with default
             )
 
-            # Add custom fields if you're using a custom User model
-            user.phone_number = data["phoneNumber"]
-            user.address = data["address"]
-            user.aadhar_number = data["aadharNumber"]
-            user.emergency_contact1 = data["emergencyContact1"]
-            user.emergency_contact2 = data["emergencyContact2"]
-            user.save()
+            return Response({"message": "User created successfully", "user_id": user.id}, status=status.HTTP_201_CREATED)
 
-            return Response({"message": "User created successfully"}, status=status.HTTP_201_CREATED)
-
-        except IntegrityError:
-            return Response({"error": "An error occurred while creating the user."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except IntegrityError as e:
+            return Response({"error": f"An error occurred while creating the user: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except Exception as e:
+            return Response({"error": f"An error occurred: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class LoginView(APIView):
     def post(self, request):
@@ -228,7 +234,11 @@ class form_report(APIView):
         try:
             user = self.authenticate_user(request)
             data = request.data.copy()
-            data['severity'] = self.chain.invoke({"user_input": data.get("description", "")}).strip()
+            severity_response = self.chain.invoke({"user_input": data.get("description", "")}).strip().lower()
+            
+            # Extract valid severity value - handle LLM refusals or errors
+            valid_severities = ['high', 'medium', 'low']
+            data['severity'] = next((sev for sev in valid_severities if sev in severity_response), 'medium')
             print("data received", data)
             
             # Validate location data and get coordinates for processing
@@ -1451,7 +1461,7 @@ def get_incident_statistics(request):
     # Convert to the format expected by the frontend
     monthly_trend = []
     for entry in monthly_incidents:
-        month_date = datetime.date(year=entry['year'], month=entry['month'], day=1)
+        month_date = date(year=entry['year'], month=entry['month'], day=1)
         monthly_trend.append({
             'month': month_date.isoformat(),
             'count': entry['count']
@@ -1574,13 +1584,13 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from django.db.models import Count
 from django.db.models.functions import TruncDate, ExtractHour, ExtractWeekDay
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from django.utils import timezone
-import google.generativeai as genai
 import json
+from langchain_groq import ChatGroq as GroqLLM
 
-# Configure Gemini API
-genai.configure(api_key="AIzaSyCKE2zTu0pMUnh42p4tYiNeheACg5Ns-zo")
+# Configure Groq API
+groq_api_key = "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"
 
 @api_view(['GET'])
 def incident_forecast(request):
@@ -1706,7 +1716,11 @@ def incident_forecast(request):
         }
         
         # IMPROVED PROMPT - More conversational, structured output
-        model = genai.GenerativeModel('gemini-2.0-flash-exp')
+        groq_model = GroqLLM(
+            model="llama-3.1-8b-instant",
+            api_key=groq_api_key,
+            temperature=0.7
+        )
         
         prompt = f"""You are an expert public safety analyst. Analyze this incident data and provide insights in a clear, professional tone.
 
@@ -1731,8 +1745,8 @@ Provide a concise analysis in 3-4 paragraphs covering:
 
 Write in a professional but conversational tone. Use natural paragraphs, not bullet points or headers. Be specific with numbers and percentages."""
 
-        response = model.generate_content(prompt)
-        ai_summary = response.text.strip()
+        response = groq_model.invoke(prompt)
+        ai_summary = response.content.strip()
         
         # Predictions
         if len(trend_data) >= 7:
@@ -1753,8 +1767,8 @@ Provide exactly 5 specific, actionable recommendations for police administration
 Format as plain sentences, one per line, without numbers, bullets, or special characters.
 Each should be 1-2 sentences and directly actionable."""
 
-        rec_response = model.generate_content(rec_prompt)
-        recommendations_raw = rec_response.text.strip()
+        rec_response = groq_model.invoke(rec_prompt)
+        recommendations_raw = rec_response.content.strip()
         
         # Clean recommendations - remove numbering, bullets, etc.
         recommendations = []
