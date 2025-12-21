@@ -79,6 +79,15 @@ from django.db.models.functions import (
 from django.utils import timezone
 from datetime import timedelta
 
+# Model for severity classification - lower temperature for consistent results
+severity_model = ChatGroq(
+                model="llama-3.1-8b-instant",
+                api_key="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",
+                max_retries=3,
+                temperature=0.1  # Low temperature for consistent classification
+            )
+
+# Model for general chat - higher temperature for more natural responses
 model = ChatGroq(
                 model="llama-3.1-8b-instant",
                 api_key="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",
@@ -189,43 +198,143 @@ class LoginView(APIView):
 class form_report(APIView):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.llm = model
+        self.llm = severity_model  # Use dedicated severity model with low temperature
         self.prompt = ChatPromptTemplate.from_messages([
-            ("system", """
-             Analyze the incident report and determine its severity level strictly based on the given description, using the following criteria:
-               high:
+            ("system", """You are an expert emergency incident classifier for a civic reporting system in India. Your task is to analyze incident reports and assign the correct severity level.
 
-               Immediate threat to life
-               Multiple casualties
-               Large-scale property damage
-               Ongoing dangerous situation
-               Major infrastructure failures (gas leaks, building collapse, major water pipe bursts)
-               Situations requiring immediate emergency response
+SEVERITY CLASSIFICATION RULES:
 
-               medium:
+=== HIGH SEVERITY (Immediate Emergency Response Required) ===
+ALWAYS classify as HIGH if ANY of these conditions are present:
 
-               Non-life-threatening injuries
-               Significant property damage
-               Potential for situation escalation
-               Missing persons cases
-               Infrastructure issues affecting multiple people (power outages, major road damage, sewer overflows)
-               Public safety concerns (dangerous buildings, traffic signal failures in busy areas)
-               Environmental hazards (significant pollution, tree falls blocking roads)
+**Life-Threatening Situations:**
+- Any mention of: death, dying, deceased, fatal, killed, critical condition, unconscious, not breathing, heart attack, stroke, choking, drowning, electrocution
+- Severe injuries: heavy bleeding, deep wounds, fractures, burns, head trauma, internal injuries
+- Medical emergencies: seizures, severe allergic reactions, difficulty breathing, chest pain, pregnancy complications
+- Person trapped, stuck, or unable to move
+- Suicide threats or attempts, self-harm
 
-               low:
+**Violence & Crimes in Progress:**
+- Active violence: assault, attack, fighting, beating, stabbing, shooting
+- Domestic violence with injuries or immediate danger
+- Sexual assault, rape, molestation (ongoing or recent)
+- Kidnapping, abduction, human trafficking
+- Child abuse with injuries or immediate danger
+- Armed robbery, home invasion in progress
+- Threats with weapons
 
-               Minor incidents
-               No injuries
-               Minor property damage
-               Non-emergency situations
-               Routine civic issues (potholes, broken streetlights, overflowing trash bins)
-               Minor infrastructure problems (single household water issues, minor road damage)
-               Non-urgent maintenance needs (damaged trees not blocking traffic, minor noise complaints)
-               Administrative issues (illegal vendors, minor encroachment, non-emergency harassment)
+**Fire & Hazardous Situations:**
+- Any active fire (building, vehicle, forest, electrical)
+- Gas leak with smell detected
+- Chemical spill or hazardous material exposure
+- Building collapse or structural failure
+- Explosion or bomb threat
+- Electrical hazard with sparking/fire risk
 
-               You must return only one of these words: high, medium, or low based on the information provided. If details are unclear, make the best possible classification rather than asking for more details. Do not include explanations—return only the classification.
-            """),
-            ("human", "{user_input}")
+**Major Infrastructure Failures:**
+- Major water pipe burst flooding area
+- Power lines down on ground
+- Bridge/road collapse
+- Dam breach or flood warning
+
+**Natural Disasters:**
+- Earthquake damage with people affected
+- Flooding with people trapped
+- Landslide, cyclone, tsunami impact
+
+**Keywords indicating HIGH severity:**
+- urgent, emergency, immediately, right now, hurry, help, dying, blood, fire, trapped, attack, weapon, gun, knife, accident with injuries, crash, collision with injuries
+
+=== MEDIUM SEVERITY (Prompt Response Required - Within Hours) ===
+Classify as MEDIUM if:
+
+**Injuries & Health Concerns:**
+- Minor injuries: cuts, bruises, sprains (person is stable and conscious)
+- Illness requiring medical attention but not life-threatening
+- Elderly person fallen but conscious and responsive
+- Animal bites (non-venomous)
+
+**Safety Hazards with Escalation Potential:**
+- Traffic signal not working at busy intersection
+- Large pothole on main road/highway causing accident risk
+- Water pipe leak affecting multiple households
+- Exposed electrical wires (not sparking)
+- Open manhole covers
+- Dangerous building that could collapse
+- Tree fallen or about to fall on road/power lines
+
+**Ongoing Crimes & Harassment:**
+- Stalking (pattern of behavior)
+- Harassment (repeated incidents)
+- Domestic violence (past incident, person safe now but at risk)
+- Suspicious activities, potential criminal planning
+- Missing person (especially children, elderly, disabled)
+
+**Public Health & Environmental:**
+- Sewage overflow affecting public areas
+- Illegal dumping of hazardous waste
+- Stray dogs showing aggressive behavior
+- Food poisoning outbreak
+- Significant water contamination
+
+**Infrastructure Issues Affecting Many:**
+- Power outage affecting large area
+- Road damage blocking major traffic
+- Public transport breakdown affecting many people
+- Water supply cut to neighborhood
+
+**Keywords indicating MEDIUM severity:**
+- dangerous, risky, hazard, might cause, could lead to, several people affected, busy area, main road, multiple, spreading, getting worse, concerned, worried, scared
+
+=== LOW SEVERITY (Routine Maintenance - Can Wait Days) ===
+Classify as LOW ONLY if ALL of these are true:
+- No immediate danger to life or safety
+- No injuries or health risks
+- Single household or small area affected
+- Issue is an inconvenience, not a hazard
+- No potential for escalation
+
+**Examples:**
+- Small pothole on side street
+- Single broken streetlight
+- Overflowing trash bin (single location)
+- Minor illegal parking
+- Noise complaint (non-threatening)
+- Illegal vendors (non-blocking)
+- Minor encroachment
+- Stray animals (not aggressive)
+- Minor water pressure issues (single home)
+- Request for municipal services
+- Feedback or suggestions
+
+=== INCIDENT TYPE SEVERITY BOOST ===
+These incident types should NEVER be classified as LOW:
+- Fire → Minimum MEDIUM, usually HIGH
+- Accident → Minimum MEDIUM if any vehicle damage, HIGH if injuries mentioned
+- Medical Emergency → Always HIGH
+- Natural Disaster → Always HIGH
+- Domestic Violence → Minimum MEDIUM
+- Child Abuse → Minimum MEDIUM
+- Sexual Harassment → Minimum MEDIUM
+- Human Trafficking → Always HIGH
+- Missing Persons → Minimum MEDIUM, HIGH if child/elderly
+
+=== CLASSIFICATION PROCESS ===
+1. First, identify any HIGH severity keywords or situations → If found, return "high"
+2. Check if incident type requires minimum severity boost
+3. Look for MEDIUM severity indicators
+4. Only classify as LOW if clearly routine/minor with no danger
+
+=== IMPORTANT RULES ===
+- When in doubt between two levels, choose the HIGHER severity
+- Descriptions mentioning multiple people affected → Bump up one level
+- Descriptions in urgent/emotional language → Consider bumping up one level
+- Short/vague descriptions about serious incident types (fire, accident, violence) → Default to MEDIUM or HIGH
+- Never classify violence, fire, accidents with injuries, or medical emergencies as LOW
+
+Return ONLY one word: "high", "medium", or "low"
+"""),
+            ("human", "Incident Type: {incident_type}\n\nDescription: {user_input}")
         ])
         self.chain = self.prompt | self.llm | StrOutputParser()
 
@@ -234,12 +343,38 @@ class form_report(APIView):
         try:
             user = self.authenticate_user(request)
             data = request.data.copy()
-            severity_response = self.chain.invoke({"user_input": data.get("description", "")}).strip().lower()
+            
+            # Get incident type and description for severity analysis
+            incident_type = data.get("incidentType", "Other")
+            description = data.get("description", "")
+            
+            # Analyze severity using both incident type and description
+            severity_response = self.chain.invoke({
+                "incident_type": incident_type,
+                "user_input": description
+            }).strip().lower()
             
             # Extract valid severity value - handle LLM refusals or errors
             valid_severities = ['high', 'medium', 'low']
-            data['severity'] = next((sev for sev in valid_severities if sev in severity_response), 'medium')
-            print("data received", data)
+            detected_severity = next((sev for sev in valid_severities if sev in severity_response), None)
+            
+            # Apply incident type minimum severity rules if LLM returned low
+            high_severity_types = ['Medical Emergency', 'Natural Disaster', 'Human Trafficking']
+            medium_min_types = ['Fire', 'Accident', 'Domestic Violence', 'Child Abuse', 
+                               'Sexual Harassment', 'Stalking', 'Missing Persons', 'Injury']
+            
+            if incident_type in high_severity_types:
+                data['severity'] = 'high'
+            elif detected_severity == 'low' and incident_type in medium_min_types:
+                data['severity'] = 'medium'
+            elif detected_severity:
+                data['severity'] = detected_severity
+            else:
+                # Default to medium if LLM fails to return valid severity
+                data['severity'] = 'medium'
+            
+            print(f"Incident Type: {incident_type}, Description: {description[:100]}...")
+            print(f"LLM Response: {severity_response}, Final Severity: {data['severity']}")
             
             # Validate location data and get coordinates for processing
             location_dict = self.validate_location(data.get("location"))

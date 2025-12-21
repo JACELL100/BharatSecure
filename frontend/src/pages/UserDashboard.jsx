@@ -32,6 +32,30 @@ const UserDashboard = () => {
 
   const token = localStorage.getItem("accessToken");
 
+  // Helper function to get a valid Google Maps URL from incident data
+  const getLocationUrl = (incident) => {
+    // First check if maps_link is valid
+    if (incident.maps_link && incident.maps_link !== "None" && incident.maps_link.startsWith("http")) {
+      return incident.maps_link;
+    }
+    
+    // Try to parse location - it might be a string or object
+    let location = incident.location;
+    if (typeof location === "string") {
+      try {
+        location = JSON.parse(location);
+      } catch (e) {
+        return "#";
+      }
+    }
+    
+    if (location?.latitude && location?.longitude) {
+      return `https://www.google.com/maps?q=${location.latitude},${location.longitude}`;
+    }
+    
+    return "#";
+  };
+
   const getSeverityColor = (severity) => {
     if (severity === "low") return "text-blue-400 border-lime-300  border-2";
     if (severity === "medium")
@@ -269,7 +293,7 @@ const UserDashboard = () => {
                         </td>
                         <td className="p-4">
                           <a
-                            href={incident.maps_link}
+                            href={getLocationUrl(incident)}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex items-center text-sky-400 hover:text-sky-300 transition-colors"
@@ -343,7 +367,7 @@ const UserDashboard = () => {
                       </div>
                       <div className="flex gap-2">
                         <a
-                          href={incident.maps_link}
+                          href={getLocationUrl(incident)}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex items-center text-sky-400 hover:text-sky-300 transition-colors p-2 bg-sky-400/10 rounded-lg"
