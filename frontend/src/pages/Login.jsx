@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import axios from "axios";
 import {
   Container,
@@ -25,10 +25,16 @@ const Login = () => {
     rememberMe: false,
   });
   const [errors, setErrors] = useState({});
-  const { login } = useAuth();
+  const { isLoggedIn, signInWithPassword, signInWithGoogle } = useAuth();
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      navigate("/my-reports");
+    }
+  }, [isLoggedIn, navigate]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -52,25 +58,49 @@ const Login = () => {
   const handleLogin = async () => {
     if (validate()) {
       try {
-        const response = await axios.post(`${API_URL}/api/login/`, {
-          email: formData.email,
-          password: formData.password,
-        });
+        const normalizedEmail = formData.email.trim().toLowerCase();
 
-        const {
-          tokens: { access, refresh },
-        } = response.data;
-        localStorage.setItem("accessToken", access);
-        localStorage.setItem("refreshToken", refresh);
-        localStorage.setItem("userType", response.data.user_type);
-        login();
-        navigate(response.data.user_type === "user" ? "/my-reports" : "/admin");
+        if (normalizedEmail.endsWith("@admin.com")) {
+          const response = await axios.post(`${API_URL}/api/login/`, {
+            email: normalizedEmail,
+            password: formData.password,
+          });
+
+          const {
+            tokens: { access, refresh },
+          } = response.data;
+          localStorage.setItem("accessToken", access);
+          localStorage.setItem("refreshToken", refresh);
+          localStorage.setItem("userType", response.data.user_type);
+          navigate(response.data.user_type === "user" ? "/my-reports" : "/admin");
+          return;
+        }
+
+        const { error } = await signInWithPassword(normalizedEmail, formData.password);
+        if (error) {
+          throw error;
+        }
+
+        navigate("/my-reports");
       } catch (error) {
-        setErrors({
-          ...errors,
-          general: error.response?.data?.error || "Something went wrong!",
-        });
+        setErrors((prev) => ({
+          ...prev,
+          general:
+            error.response?.data?.error ||
+            error.message ||
+            "Unable to sign in. Please try again.",
+        }));
       }
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    const { error } = await signInWithGoogle();
+    if (error) {
+      setErrors((prev) => ({
+        ...prev,
+        general: error.message || "Google sign-in failed. Please try again.",
+      }));
     }
   };
 
@@ -303,6 +333,28 @@ const Login = () => {
                 onClick={handleLogin}
               >
                 Log In
+              </Button>
+              <Button
+                variant="outlined"
+                fullWidth
+                size={isMobile ? "medium" : "large"}
+                sx={{
+                  mt: 1.5,
+                  borderColor: "#fff",
+                  color: "#fff",
+                  padding: isMobile ? "10px" : "14px 20px",
+                  borderRadius: 1,
+                  fontWeight: "bold",
+                  textTransform: "none",
+                  fontSize: isMobile ? "0.9rem" : "1rem",
+                  "&:hover": {
+                    borderColor: "#3498db",
+                    backgroundColor: "rgba(52, 152, 219, 0.12)",
+                  },
+                }}
+                onClick={handleGoogleLogin}
+              >
+                Continue with Google
               </Button>
               {errors.general && (
                 <Typography 

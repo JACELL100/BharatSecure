@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import axios from "axios";
 import {
   Container,
   Box,
@@ -13,6 +12,7 @@ import {
 } from "@mui/material";
 import Footer from "../components/Footer";
 import { useNavigate, Link } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
 
 const SignUp = () => {
   const navigate = useNavigate();
@@ -31,7 +31,7 @@ const SignUp = () => {
   const [errors, setErrors] = useState({});
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const API_URL = import.meta.env.VITE_API_URL;
+  const { signUpWithPassword } = useAuth();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -63,28 +63,34 @@ const SignUp = () => {
     setError("");
 
     try {
-      const response = await axios.post(`${API_URL}/api/signup/`, formData);
-      if (response.status === 201) {
-        setMessage("Account created successfully!");
-        setFormData({
-          firstName: "",
-          lastName: "",
-          email: "",
-          phoneNumber: "",
-          address: "",
-          aadharNumber: "",
-          password: "",
-        });
+      const { data, error: signUpError } = await signUpWithPassword(formData);
+
+      if (signUpError) {
+        throw signUpError;
+      }
+
+      setMessage(
+        data?.session
+          ? "Account created successfully!"
+          : "Account created. Check your email to verify your account, then sign in."
+      );
+      setFormData({
+        firstName: "",
+        lastName: "",
+        email: "",
+        phoneNumber: "",
+        address: "",
+        aadharNumber: "",
+        password: "",
+      });
+
+      if (data?.session) {
+        navigate("/my-reports");
+      } else {
         navigate("/login");
       }
     } catch (err) {
-      if (err.response) {
-        setError(
-          err.response.data.detail || "Error occurred while signing up."
-        );
-      } else {
-        setError("An unexpected error occurred.");
-      }
+      setError(err.message || "Error occurred while signing up.");
     }
   };
 

@@ -20,7 +20,7 @@ from .serializers import IncidentSerializer
 from rest_framework.views import APIView
 from django.contrib.auth.hashers import make_password
 from django.db import IntegrityError
-from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
+from rest_framework_simplejwt.tokens import RefreshToken, AccessToken as SimpleJWTAccessToken
 import logging
 logger = logging.getLogger(__name__)
 from rest_framework import generics, status
@@ -42,6 +42,259 @@ from django.db.models.functions import (
     ExtractHour, ExtractYear
 )
 import os
+import hashlib
+from urllib.parse import urlparse
+
+import jwt
+from jwt import InvalidTokenError, PyJWKClient
+
+
+_supabase_jwk_client = None
+
+
+def _digits_from_seed(seed, length):
+    digest = hashlib.sha256(seed.encode("utf-8")).hexdigest()
+    digits = ""
+
+    while len(digits) < length:
+        digits += "".join(str(int(ch, 16) % 10) for ch in digest)
+        digest = hashlib.sha256((digest + seed).encode("utf-8")).hexdigest()
+
+    return digits[:length]
+
+
+def _get_unique_numeric_value(field_name, base_seed, length, exclude_email=None):
+    for index in range(1000):
+        candidate = _digits_from_seed(f"{base_seed}:{index}", length)
+        query = User.objects.filter(**{field_name: candidate})
+        if exclude_email:
+            query = query.exclude(email=exclude_email)
+        if not query.exists():
+            return candidate
+
+    raise ValueError(f"Unable to generate unique value for {field_name}")
+
+
+def _sync_supabase_user(claims):
+    email = claims.get("email")
+    if not email:
+        raise InvalidTokenError("Supabase token missing email claim")
+
+    metadata = claims.get("user_metadata") or {}
+    if not isinstance(metadata, dict):
+        metadata = {}
+
+    full_name = (metadata.get("full_name") or "").strip()
+    full_name_parts = [part for part in full_name.split(" ") if part]
+
+    first_name = (
+        metadata.get("first_name")
+        or metadata.get("given_name")
+        or (full_name_parts[0] if full_name_parts else "Supabase")
+    )
+    last_name = (
+        metadata.get("last_name")
+        or metadata.get("family_name")
+        or (" ".join(full_name_parts[1:]) if len(full_name_parts) > 1 else "User")
+    )
+
+    source_seed = str(claims.get("sub") or email)
+
+    phone_number = metadata.get("phone_number") or metadata.get("phone")
+    if isinstance(phone_number, str):
+        phone_number = "".join(ch for ch in phone_number if ch.isdigit())
+    if not isinstance(phone_number, str) or len(phone_number) != 10:
+        phone_number = _get_unique_numeric_value("phone_number", f"phone:{source_seed}", 10, exclude_email=email)
+    elif User.objects.filter(phone_number=phone_number).exclude(email=email).exists():
+        phone_number = _get_unique_numeric_value("phone_number", f"phone:{source_seed}", 10, exclude_email=email)
+
+    aadhar_number = metadata.get("aadhar_number")
+    if isinstance(aadhar_number, str):
+        aadhar_number = "".join(ch for ch in aadhar_number if ch.isdigit())
+    if not isinstance(aadhar_number, str) or len(aadhar_number) != 12:
+        aadhar_number = _get_unique_numeric_value("aadhar_number", f"aadhar:{source_seed}", 12, exclude_email=email)
+    elif User.objects.filter(aadhar_number=aadhar_number).exclude(email=email).exists():
+        aadhar_number = _get_unique_numeric_value("aadhar_number", f"aadhar:{source_seed}", 12, exclude_email=email)
+
+    emergency_contact1 = metadata.get("emergency_contact1") or "0000000000"
+    emergency_contact2 = metadata.get("emergency_contact2") or "0000000000"
+
+    if isinstance(emergency_contact1, str):
+        emergency_contact1 = "".join(ch for ch in emergency_contact1 if ch.isdigit())
+    if isinstance(emergency_contact2, str):
+        emergency_contact2 = "".join(ch for ch in emergency_contact2 if ch.isdigit())
+
+    if len(emergency_contact1) != 10:
+        emergency_contact1 = "0000000000"
+    if len(emergency_contact2) != 10:
+        emergency_contact2 = "0000000000"
+
+    address = metadata.get("address") or "Not provided"
+
+    user = User.objects.filter(email=email).first()
+    if user:
+        fields_to_update = []
+
+        if first_name and user.first_name != first_name[:50]:
+            user.first_name = first_name[:50]
+            fields_to_update.append("first_name")
+
+        if last_name and user.last_name != last_name[:50]:
+            user.last_name = last_name[:50]
+            fields_to_update.append("last_name")
+
+        if address and user.address != address:
+            user.address = address
+            fields_to_update.append("address")
+
+        if fields_to_update:
+            user.save(update_fields=fields_to_update)
+
+        return user
+
+    return User.objects.create_user(
+        email=email,
+        password=source_seed,
+        first_name=first_name[:50],
+        last_name=last_name[:50],
+        phone_number=phone_number,
+        address=address,
+        aadhar_number=aadhar_number,
+        emergency_contact1=emergency_contact1,
+        emergency_contact2=emergency_contact2,
+    )
+
+
+def _decode_supabase_token(token_str):
+    def _derive_supabase_url_from_token():
+        configured_url = getattr(settings, "SUPABASE_URL", "").strip()
+        if configured_url:
+            return configured_url.rstrip("/")
+
+        try:
+            payload = jwt.decode(
+                token_str,
+                options={
+                    "verify_signature": False,
+                    "verify_exp": False,
+                    "verify_aud": False,
+                },
+            )
+        except Exception:
+            payload = {}
+
+        project_ref = payload.get("ref")
+        if project_ref:
+            return f"https://{project_ref}.supabase.co"
+
+        iss = str(payload.get("iss") or "").strip()
+        if iss.startswith("http"):
+            parsed_iss = urlparse(iss)
+            if parsed_iss.scheme and parsed_iss.netloc:
+                return f"{parsed_iss.scheme}://{parsed_iss.netloc}"
+
+        return ""
+
+    def _decode_via_supabase_auth_api():
+        supabase_url = _derive_supabase_url_from_token()
+        if not supabase_url:
+            raise InvalidTokenError("Supabase URL is missing. Set SUPABASE_URL in environment.")
+
+        cache_key = f"supabase_claims:{hashlib.sha256(token_str.encode('utf-8')).hexdigest()}"
+        cached_claims = cache.get(cache_key)
+        if cached_claims:
+            return cached_claims
+
+        headers = {
+            "Authorization": f"Bearer {token_str}",
+        }
+        supabase_anon_key = getattr(settings, "SUPABASE_ANON_KEY", "").strip()
+        if supabase_anon_key:
+            headers["apikey"] = supabase_anon_key
+
+        response = requests.get(f"{supabase_url}/auth/v1/user", headers=headers, timeout=10)
+        if response.status_code != 200:
+            raise InvalidTokenError(f"Supabase auth verification failed with status {response.status_code}")
+
+        user_data = response.json()
+        claims = {
+            "sub": user_data.get("id"),
+            "email": user_data.get("email"),
+            "user_metadata": user_data.get("user_metadata") or {},
+        }
+
+        if not claims["email"]:
+            raise InvalidTokenError("Supabase auth payload missing email")
+
+        cache.set(cache_key, claims, timeout=300)
+        return claims
+
+    global _supabase_jwk_client
+
+    supabase_jwks_url = getattr(settings, "SUPABASE_JWKS_URL", "").strip()
+    supabase_jwt_secret = getattr(settings, "SUPABASE_JWT_SECRET", "").strip()
+
+    try:
+        header = jwt.get_unverified_header(token_str)
+        jwt_alg = str(header.get("alg") or "").upper()
+    except Exception:
+        jwt_alg = ""
+
+    if jwt_alg.startswith("HS"):
+        if supabase_jwt_secret:
+            return jwt.decode(
+                token_str,
+                supabase_jwt_secret,
+                algorithms=[jwt_alg],
+                options={"verify_aud": False},
+            )
+        return _decode_via_supabase_auth_api()
+
+    if supabase_jwks_url:
+        try:
+            if _supabase_jwk_client is None:
+                _supabase_jwk_client = PyJWKClient(supabase_jwks_url)
+
+            signing_key = _supabase_jwk_client.get_signing_key_from_jwt(token_str).key
+            return jwt.decode(
+                token_str,
+                signing_key,
+                algorithms=["RS256"],
+                options={"verify_aud": False},
+            )
+        except Exception:
+            # Some Supabase projects still issue HS256 tokens.
+            pass
+
+    if supabase_jwt_secret:
+        return jwt.decode(
+            token_str,
+            supabase_jwt_secret,
+            algorithms=["HS256"],
+            options={"verify_aud": False},
+        )
+
+    return _decode_via_supabase_auth_api()
+
+
+def AccessToken(token_str):
+    # Keep legacy local JWT support for existing admin flows.
+    try:
+        token = SimpleJWTAccessToken(token_str)
+        user_id = token.get("user_id")
+        user_type = token.get("user_type")
+
+        if user_id is not None:
+            if user_type not in {"admin", "user"}:
+                user_type = "user"
+            return {"user_id": int(user_id), "user_type": user_type}
+    except Exception:
+        pass
+
+    # For Supabase sessions, validate JWT and map to local user profile.
+    claims = _decode_supabase_token(token_str)
+    user = _sync_supabase_user(claims)
+    return {"user_id": user.id, "user_type": "user"}
 
 # Admin email for notifications
 ADMIN_EMAIL = 'jacelljamble@gmail.com'
@@ -79,10 +332,13 @@ from django.db.models.functions import (
 from django.utils import timezone
 from datetime import timedelta
 
+# Read Groq key from environment instead of hardcoding secrets.
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
+
 # Model for severity classification - lower temperature for consistent results
 severity_model = ChatGroq(
                 model="llama-3.1-8b-instant",
-                api_key="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",
+                api_key=GROQ_API_KEY,
                 max_retries=3,
                 temperature=0.1  # Low temperature for consistent classification
             )
@@ -90,7 +346,7 @@ severity_model = ChatGroq(
 # Model for general chat - higher temperature for more natural responses
 model = ChatGroq(
                 model="llama-3.1-8b-instant",
-                api_key="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",
+                api_key=GROQ_API_KEY,
                 max_retries=3,
                 temperature=0.7
             )
@@ -175,6 +431,7 @@ class LoginView(APIView):
 
             # Generate JWT tokens
             refresh = RefreshToken.for_user(user)
+            refresh['user_type'] = user_type
             return Response({
                 "message": "Login successful",
                 "user_type": user_type,
@@ -989,6 +1246,9 @@ def all_user_incidents(request):
 
         # Extract the token from the header
         token_str = auth_header.split(' ')[1]  # 'Bearer <token>'
+        if not token_str or token_str in {'null', 'undefined'}:
+            return Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+
         token = AccessToken(token_str)
 
         # Validate and retrieve the user
@@ -1000,6 +1260,8 @@ def all_user_incidents(request):
         return Response({"incidents": list(incidents)}, status=200)
     except User.DoesNotExist:
         return Response({"error": "User not found"}, status=404)
+    except InvalidTokenError:
+        return Response({"error": "Invalid or expired token"}, status=status.HTTP_401_UNAUTHORIZED)
     except Exception as e:
         return Response({"error": f"There was an error while finding the reports: {e}"}, status=400)
     
@@ -1028,6 +1290,10 @@ def all_station_incidents(request):
         # Extract and validate the token
         token_str = auth_header.split(' ')[1]
         token = AccessToken(token_str)
+
+        if token.get('user_type') != 'admin':
+            raise PermissionError("Admin token required")
+
         admin = get_object_or_404(Admin, id=token['user_id'])
     except Exception:
         return Response(
@@ -1640,6 +1906,10 @@ def get_incident_analytics(request):
         # Extract and validate the token
         token_str = auth_header.split(' ')[1]
         token = AccessToken(token_str)
+
+        if token.get('user_type') != 'admin':
+            raise PermissionError("Admin token required")
+
         admin = get_object_or_404(Admin, id=token['user_id'])
     except Exception:
         return Response(
@@ -1725,7 +1995,7 @@ import json
 from langchain_groq import ChatGroq as GroqLLM
 
 # Configure Groq API
-groq_api_key = "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"
+groq_api_key = GROQ_API_KEY
 
 @api_view(['GET'])
 def incident_forecast(request):

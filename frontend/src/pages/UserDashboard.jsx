@@ -20,14 +20,13 @@ import ChartsUser from "./charts-user";
 
 const UserDashboard = () => {
   const navigate = useNavigate();
-  const { isLoggedIn, login, logout } = useAuth();
+  const { isLoggedIn, logout } = useAuth();
   console.log(`is logged in ${isLoggedIn}`);
 
   const [total, setTotal] = useState();
   const [resolved, setResolved] = useState(0);
   const [unresolved, setUnResolved] = useState(0);
   const [incidents, setIncidents] = useState([]);
-  const API_HOST = import.meta.env.VITE_API_HOST;
   const API_URL = import.meta.env.VITE_API_URL;
 
   const token = localStorage.getItem("accessToken");
@@ -96,6 +95,11 @@ const UserDashboard = () => {
 
   useEffect(() => {
     const fetchIncidents = async () => {
+      if (!token || token === "null" || token === "undefined") {
+        navigate("/login");
+        return;
+      }
+
       try {
         // console.log(`Access Token: ${token}`);
         const response = await fetch(
@@ -126,6 +130,13 @@ const UserDashboard = () => {
             console.error("Unexpected data format:", data);
           }
         } else {
+          if (response.status === 401) {
+            localStorage.removeItem("accessToken");
+            localStorage.removeItem("refreshToken");
+            localStorage.removeItem("userType");
+            navigate("/login");
+            return;
+          }
           console.error(
             `Error fetching incidents: ${response.statusText} (Status: ${response.status})`
           );
@@ -136,7 +147,7 @@ const UserDashboard = () => {
     };
 
     fetchIncidents();
-  }, []); // Empty dependency array ensures this runs only once
+  }, [API_URL, navigate, token]);
 
   console.log("user data dashboard", incidents);
   return (

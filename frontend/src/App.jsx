@@ -1,5 +1,4 @@
 import React, { Suspense, lazy } from "react";
-import { useState, useEffect } from "react";
 import "./App.css";
 import Navbar1 from "./components/Navbar1";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
@@ -17,7 +16,7 @@ import SignUp from "./pages/SignUp";
 import Login from "./pages/Login";
 // import Blogs from "./pages/Blog"; not in use anymore
 import ScrollToTop from "./lib/ScrollToTop";
-import { AuthProvider, useAuth } from "./context/AuthContext";
+import { AuthProvider } from "./context/AuthContext";
 // import RecentIncidents from "./pages/RecentIncidents";
 // import FeedbackForm from "./pages/FeedbackForm";
 import ViewDetails from "./pages/ViewDetails";
@@ -78,8 +77,6 @@ const App = () => {
                 <Route element={<UserRoute />}>
                   <Route path="/my-reports" element={<UserDashboard />} />
                 </Route>
-                <Route path="/my-reports" element={<UserDashboard />} />
-                <Route path="/admin" element={<AdminDashboard />} />
                 <Route path="/upload" element={<UploadPage />} />
                 <Route path="/photos" element={<PhotoList />} />
                 <Route path="/chat" element={<Chat />} />

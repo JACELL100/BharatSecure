@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   LineChart,
   Line,
@@ -25,6 +26,7 @@ const COLORS = [
 ];
 
 const IncidentDashboardUser = () => {
+  const navigate = useNavigate();
   const [stats, setStats] = useState({
     incident_types: [],
     monthly_trend: [],
@@ -35,13 +37,18 @@ const IncidentDashboardUser = () => {
   });
   const [timeRange, setTimeRange] = useState(30);
   const [loading, setLoading] = useState(true);
-  const API_HOST = import.meta.env.VITE_API_HOST;
   const API_URL = import.meta.env.VITE_API_URL;
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
         const token = localStorage.getItem("accessToken");
+        if (!token || token === "null" || token === "undefined") {
+          setLoading(false);
+          navigate("/login");
+          return;
+        }
+
         setLoading(true);
         const response = await fetch(
           `${API_URL}/api/incident-chart-user/`,
@@ -53,6 +60,18 @@ const IncidentDashboardUser = () => {
             },
           }
         );
+
+        if (!response.ok) {
+          if (response.status === 401) {
+            localStorage.removeItem("accessToken");
+            localStorage.removeItem("refreshToken");
+            localStorage.removeItem("userType");
+            navigate("/login");
+            return;
+          }
+          throw new Error(`Failed to fetch statistics: ${response.status}`);
+        }
+
         const data = await response.json();
         setStats({
           incident_types: data.incident_types || [],
@@ -78,7 +97,7 @@ const IncidentDashboardUser = () => {
     };
 
     fetchStats();
-  }, [timeRange]);
+  }, [API_URL, navigate, timeRange]);
 
   if (loading) {
     return (
