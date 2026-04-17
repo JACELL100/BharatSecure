@@ -67,7 +67,7 @@ const Navbar = () => {
       }}
     >
       <List>
-        {["/", "/About", "/Blogs"].map((route, index) => {
+        {["/", "/About", "/InciLog"].map((route, index) => {
           const label = route.slice(1) || "Home";
           return (
             <ListItemButton
