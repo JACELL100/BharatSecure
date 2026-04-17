@@ -1,7 +1,13 @@
 import React, { Suspense, lazy } from "react";
 import "./App.css";
 import Navbar1 from "./components/Navbar1";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+  useLocation,
+} from "react-router-dom";
 import Home from "./pages/Home";
 // import IncidentReportForm from "./pages/IncidentReportForm";
 // import UserDashboard from "./pages/UserDashboard"; //lazy loaded
@@ -43,6 +49,51 @@ const IncidentReportForm = lazy(() => import("./pages/IncidentReportForm2"));
 const FeedbackForm = lazy(() => import("./pages/FeedbackForm"));
 const Chatbot = lazy(() => import("./pages/chatbotTrial"));
 
+const AppRoutes = () => {
+  const location = useLocation();
+
+  return (
+    <div key={location.pathname} className="reveal-up">
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route
+          path="/report-incident"
+          element={<IncidentReportForm />}
+        />
+        {/* Protected Admin Route */}
+        <Route element={<AdminRoute />}>
+          <Route path="/admin" element={<AdminDashboard />} />
+        </Route>
+        {/* Protected User Route */}
+        <Route element={<UserRoute />}>
+          <Route path="/my-reports" element={<UserDashboard />} />
+        </Route>
+        <Route path="/upload" element={<UploadPage />} />
+        <Route path="/photos" element={<PhotoList />} />
+        <Route path="/chat" element={<Chat />} />
+        <Route path="/vr/:photoId" element={<VRViewer />} />
+        <Route path="/About" element={<AboutUs />} />
+        <Route path="/heatmap" element={<HeatMap2 />} />
+        <Route path="/voice-report" element={<VoiceToText />} />
+        <Route path="/signUp" element={<SignUp />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/InciLog" element={<RecentIncidents />} />
+        <Route path="/view-details/:id" element={<ViewDetails />} />
+        <Route path="/feedback" element={<FeedbackForm />} />
+        <Route path="chatbot" element={<Chatbot />} />
+        <Route path="/forecasting" element={<IncidentForecasting />} />
+        <Route path="/pothole" element={<PotholeAnalyzer />} />
+        <Route path="/video" element={<VideoAnalysis />} />
+        <Route path="/heatmap2" element={<IncidentTypeHeatMap />} />
+        <Route path="/incident/:id" element={<ViewDetails />} />
+        <Route path="/user/:userId" element={<UserProfile />} />
+        {/* Redirect all unknown routes to Home */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </div>
+  );
+};
+
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker
     .register("./sw.js")
@@ -58,48 +109,27 @@ const App = () => {
   return (
     <AuthProvider>
       <LocationProvider>
-        <div>
+        <div className="theme-shell app-shell">
+          <div className="app-background" aria-hidden="true">
+            <div className="bg-grid"></div>
+            <span className="bg-orb bg-orb-1"></span>
+            <span className="bg-orb bg-orb-2"></span>
+            <span className="bg-orb bg-orb-3"></span>
+          </div>
           <BrowserRouter>
-            <Suspense fallback={<div>Loading...</div>}>
-              <ScrollToTop />
-              <Navbar1 />
-              <Routes>
-                <Route path="/" element={<Home />} />
-                <Route
-                  path="/report-incident"
-                  element={<IncidentReportForm />}
-                />
-                {/* Protected Admin Route */}
-                <Route element={<AdminRoute />}>
-                  <Route path="/admin" element={<AdminDashboard />} />
-                </Route>
-                {/* Protected User Route */}
-                <Route element={<UserRoute />}>
-                  <Route path="/my-reports" element={<UserDashboard />} />
-                </Route>
-                <Route path="/upload" element={<UploadPage />} />
-                <Route path="/photos" element={<PhotoList />} />
-                <Route path="/chat" element={<Chat />} />
-                <Route path="/vr/:photoId" element={<VRViewer />} />
-                <Route path="/About" element={<AboutUs />} />
-                <Route path="/heatmap" element={<HeatMap2 />} />
-                <Route path="/voice-report" element={<VoiceToText />} />
-                <Route path="/signUp" element={<SignUp />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/InciLog" element={<RecentIncidents />} />
-                <Route path="/view-details/:id" element={<ViewDetails />} />
-                <Route path="/feedback" element={<FeedbackForm />} />
-                <Route path="chatbot" element={<Chatbot />} />
-                <Route path="/forecasting" element={<IncidentForecasting />} />
-                <Route path="/pothole" element={<PotholeAnalyzer />} />
-                <Route path="/video" element={<VideoAnalysis />} />
-                <Route path="/heatmap2" element={<IncidentTypeHeatMap />} />
-                <Route path="/incident/:id" element={<ViewDetails />} />
-                <Route path="/user/:userId" element={<UserProfile />} />
-                {/* Redirect all unknown routes to Home */}
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-            </Suspense>
+            <div className="content-layer">
+              <Suspense
+                fallback={
+                  <div className="min-h-screen flex items-center justify-center text-slate-300">
+                    Loading...
+                  </div>
+                }
+              >
+                <ScrollToTop />
+                <Navbar1 />
+                <AppRoutes />
+              </Suspense>
+            </div>
           </BrowserRouter>
         </div>
       </LocationProvider>

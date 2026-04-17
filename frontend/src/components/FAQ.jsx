@@ -11,59 +11,69 @@ const FAQSection = () => {
     {
       question: "How do I report an incident?",
       answer:
-        "To report an incident, simply click the 'Report Incident' button on the homepage, fill out the form with the necessary details, and submit it. Our system will handle the rest.",
+        "Click the Report Incident feature, fill in the details, and submit. Your report is sent to the appropriate workflow immediately.",
     },
     {
       question: "What kind of incidents can I report?",
       answer:
-        "You can report various incidents such as accidents, natural disasters, health emergencies, road hazards, and more. Just provide accurate details so authorities can respond quickly.",
+        "You can report civic and safety incidents such as road damage, public hazards, emergencies, and community risk situations.",
     },
     {
-      question: "How will I know if my report has been resolved?",
+      question: "How will I know when my report is resolved?",
       answer:
-        "Once your incident is resolved, you'll receive a notification indicating its resolution status. You can also track it through your dashboard.",
+        "You can track status updates from the dashboard once authorities process and close your incident report.",
     },
     {
       question: "Can I report incidents anonymously?",
       answer:
-        "Yes, you can choose to report incidents anonymously. However, providing your contact details may help authorities respond more effectively.",
+        "Yes. You can choose anonymous reporting in applicable flows, though contact details can improve response coordination.",
     },
     {
-      question: "What happens after I submit a report?",
+      question: "What happens after submission?",
       answer:
-        "After you submit your report, the incident will be reviewed by local authorities. You'll be updated on the status of your report in real time.",
+        "The report is reviewed, categorized, and routed to relevant responders. Status then updates as progress happens.",
     },
   ];
 
   return (
-    <div className="py-12 bg-[#001a2f]">
-      <h2 className="text-[#00ffff] font-extrabold text-4xl lg:text-6xl tracking-wide mt-7 text-center mb-8 [text-shadow:_0_0_15px_rgba(0,255,255,0.5)] hover:[text-shadow:_0_0_20px_rgba(0,255,255,0.8)] transition-all duration-300">
-        Frequently Asked Questions
-      </h2>
-      <div className="max-w-4xl mx-auto px-4">
-        {faqData.map((item, index) => (
-          <div key={index} className="mb-6">
-            <button
-              onClick={() => toggleOpen(index)}
-              className="w-full text-left px-8 py-4 bg-[#002240] text-[#00ffff] border border-[#003366] rounded-xl shadow-[8px_8px_16px_#001527,_-8px_-8px_16px_#002f59] hover:shadow-[12px_12px_24px_#001527,_-12px_-12px_24px_#002f59,_0_0_20px_rgba(0,255,255,0.2)] transition-all duration-300 focus:outline-none hover:-translate-y-1"
-            >
-              <span className="text-base font-medium lg:text-lg">
-                {item.question}
-              </span>
-            </button>
-            <div
-              className={`overflow-hidden transition-[max-height] duration-500 ease-in-out ${
-                open === index ? "max-h-40" : "max-h-0"
-              }`}
-            >
-              <div className="px-8 py-5 bg-[#002240] text-[#80ffff] border border-t-0 border-[#003366] rounded-b-xl shadow-[inset_8px_8px_16px_#001527,_inset_-8px_-8px_16px_#002f59]">
-                <p>{item.answer}</p>
-              </div>
-            </div>
-          </div>
-        ))}
+    <section className="py-6 sm:py-8">
+      <div className="text-center mb-8">
+        <p className="text-xs sm:text-sm uppercase tracking-[0.2em] text-cyan-200/80">
+          Help Center
+        </p>
+        <h2 className="section-title mt-3 text-3xl lg:text-5xl font-extrabold">
+          Frequently Asked Questions
+        </h2>
       </div>
-    </div>
+
+      <div className="max-w-4xl mx-auto px-1 sm:px-2">
+        {faqData.map((item, index) => {
+          const isOpen = open === index;
+          return (
+            <article key={index} className="mb-4 reveal-up" style={{ animationDelay: `${index * 80}ms` }}>
+              <button
+                onClick={() => toggleOpen(index)}
+                className="w-full text-left px-6 py-4 rounded-2xl glass-panel transition-all duration-300 hover:-translate-y-0.5"
+              >
+                <span className="text-sm sm:text-base font-medium text-slate-100">
+                  {item.question}
+                </span>
+              </button>
+
+              <div
+                className={`overflow-hidden transition-all duration-400 ease-out ${
+                  isOpen ? "max-h-60 opacity-100" : "max-h-0 opacity-0"
+                }`}
+              >
+                <div className="px-6 py-4 text-sm sm:text-base text-slate-300 border border-t-0 border-cyan-200/10 rounded-b-2xl bg-[#0b1220]/80">
+                  {item.answer}
+                </div>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    </section>
   );
 };
 

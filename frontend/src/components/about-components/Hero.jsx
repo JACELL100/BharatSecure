@@ -10,7 +10,8 @@ const Hero = ({ onLearnMore }) => {
     sx={{
       position: "relative",
       height: "70vh",
-      background: '#001a2f',
+      background:
+        "linear-gradient(160deg, rgba(12,18,29,0.94), rgba(6,9,15,0.98))",
       backgroundImage: "url('https://cdn.pixabay.com/photo/2019/11/19/22/24/watch-4638673_640.jpg')",
       backgroundSize: "cover",
       backgroundPosition: "center",
@@ -28,8 +29,8 @@ const Hero = ({ onLearnMore }) => {
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: "rgba(0, 26, 47, 0.75)",
-        backdropFilter: "blur(5px)",
+        backgroundColor: "rgba(6, 10, 18, 0.72)",
+        backdropFilter: "blur(8px)",
       }}
     />
 
@@ -46,13 +47,13 @@ const Hero = ({ onLearnMore }) => {
           fontWeight: "bold",
           mb: 2,
           animation: "fadeIn 1s ease-in-out 0.5s",
-          fontFamily: "Ubuntu, sans-serif",
+          fontFamily: "Sora, sans-serif",
           fontSize: { xs: "2rem", sm: "2.5rem", md: "3rem" },
-          color: "#00ffff",
-          textShadow: "0 0 20px rgba(0, 255, 255, 0.5)",
+          color: "#d9ecff",
+          textShadow: "0 0 28px rgba(54, 217, 255, 0.28)",
           transition: "0.3s",
           '&:hover': {
-            textShadow: "0 0 30px rgba(0, 255, 255, 0.8)"
+            textShadow: "0 0 30px rgba(54, 217, 255, 0.45)"
           }
         }}
       >
@@ -66,10 +67,10 @@ const Hero = ({ onLearnMore }) => {
           margin: "0 auto",
           mb: 3,
           animation: "fadeIn 2s ease-in-out 1s",
-          fontFamily: "Ubuntu, sans-serif",
+          fontFamily: "Outfit, sans-serif",
           fontSize: { xs: "1rem", sm: "1.2rem" },
-          color: "#80ffff",
-          textShadow: "0 0 10px rgba(0, 255, 255, 0.3)",
+          color: "#bdd0ea",
+          textShadow: "0 0 10px rgba(54, 217, 255, 0.2)",
         }}
       >
         Our Incident Reporting and Response System is designed to ensure
@@ -88,11 +89,11 @@ const Hero = ({ onLearnMore }) => {
       >
         <LightbulbOutlined
           sx={{
-            color: "#00ffff",
+            color: "#58ddff",
             fontSize: 45,
             mr: 2,
             animation: "fadeIn 2s ease-in-out 1.5s",
-            filter: "drop-shadow(0 0 10px rgba(0, 255, 255, 0.5))",
+            filter: "drop-shadow(0 0 10px rgba(54, 217, 255, 0.5))",
           }}
         />
         <Typography
@@ -100,10 +101,10 @@ const Hero = ({ onLearnMore }) => {
           sx={{
             fontWeight: "bold",
             fontSize: "1.2rem",
-            fontFamily: "Ubuntu, sans-serif",
-            color: "#00ffff",
+            fontFamily: "Outfit, sans-serif",
+            color: "#7ae8ff",
             animation: "fadeIn 2s ease-in-out 1.5s",
-            textShadow: "0 0 10px rgba(0, 255, 255, 0.3)",
+            textShadow: "0 0 10px rgba(54, 217, 255, 0.3)",
           }}
         >
           Empowering Safety with Real-time Action
@@ -115,19 +116,19 @@ const Hero = ({ onLearnMore }) => {
         variant="contained"
         sx={{
           mt: 4,
-          bgcolor: "#002240",
-          color: "#00ffff",
+          bgcolor: "rgba(10, 16, 27, 0.85)",
+          color: "#dcf2ff",
           fontWeight: "bold",
           fontSize: "1.1rem",
           borderRadius: "25px",
           padding: "12px 24px",
-          boxShadow: '8px 8px 16px #001527, -8px -8px 16px #002f59',
-          border: '1px solid rgba(0, 255, 255, 0.1)',
+          boxShadow: "0 14px 30px rgba(5, 10, 19, 0.62)",
+          border: "1px solid rgba(126, 180, 236, 0.32)",
           transition: 'all 0.3s ease',
           animation: "fadeIn 3s ease-in-out 2s",
           "&:hover": {
-            bgcolor: "#002240",
-            boxShadow: '12px 12px 24px #001527, -12px -12px 24px #002f59, 0 0 20px rgba(0, 255, 255, 0.3)',
+            bgcolor: "rgba(12, 22, 34, 0.92)",
+            boxShadow: "0 18px 36px rgba(5, 10, 19, 0.7), 0 0 0 1px rgba(54, 217, 255, 0.35)",
             transform: "scale(1.05)",
           },
         }}

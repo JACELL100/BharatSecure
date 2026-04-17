@@ -106,6 +106,14 @@ const IncidentAnalyticsDashboard = () => {
   const [error, setError] = useState(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
+  const hasChartContent = (chartData) =>
+    Array.isArray(chartData?.labels) &&
+    chartData.labels.length > 0 &&
+    Array.isArray(chartData?.datasets) &&
+    chartData.datasets.some(
+      (dataset) => Array.isArray(dataset.data) && dataset.data.length > 0
+    );
+
   useEffect(() => {
     const handleResize = () => {
       setIsMobile(window.innerWidth < 768);
@@ -253,26 +261,43 @@ const IncidentAnalyticsDashboard = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-[#001830]">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-cyan-400 border-t-transparent shadow-[0_0_15px_rgba(34,211,238,0.3)]"></div>
+      <div className="p-4 md:p-8">
+        <div className="min-h-[320px] md:min-h-[420px] flex flex-col items-center justify-center gap-4 rounded-2xl border border-cyan-400/20 bg-[#001830] shadow-[0_20px_44px_rgba(3,7,16,0.55)]">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-cyan-400 border-t-transparent shadow-[0_0_15px_rgba(34,211,238,0.3)]"></div>
+          <p className="text-cyan-300/85 text-sm md:text-base">Loading advanced analytics...</p>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex items-center justify-center h-screen bg-[#001830]">
-        <div className="text-cyan-400 p-6 bg-[#002345] rounded-xl shadow-[5px_5px_15px_rgba(0,0,0,0.3),-5px_-5px_15px_rgba(0,255,255,0.1)] border border-cyan-400/20">
-          Error: {error}
+      <div className="p-4 md:p-8">
+        <div className="min-h-[320px] md:min-h-[420px] flex items-center justify-center rounded-2xl border border-rose-300/25 bg-[#001830] shadow-[0_20px_44px_rgba(3,7,16,0.55)]">
+          <div className="text-center max-w-xl p-6 md:p-8 bg-[#0d1828] border border-rose-300/30 rounded-xl shadow-[0_16px_36px_rgba(3,7,16,0.45)]">
+            <h2 className="text-xl md:text-2xl font-semibold text-rose-200 mb-2">Unable to load analytics</h2>
+            <p className="text-sm md:text-base text-cyan-100/80">Error: {error}</p>
+            <p className="text-xs md:text-sm text-cyan-200/60 mt-3">
+              This view is still functional and will render automatically once the API is reachable.
+            </p>
+          </div>
         </div>
       </div>
     );
   }
 
-  if (!data) return null;
+  if (!data) {
+    return (
+      <div className="p-4 md:p-8">
+        <div className="min-h-[320px] md:min-h-[420px] flex items-center justify-center rounded-2xl border border-cyan-400/20 bg-[#001830]">
+          <p className="text-cyan-200/80 text-sm md:text-base">No analytics data available yet.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="p-4 md:p-8 bg-slate-900 min-h-screen">
+    <div className="p-4 md:p-8 bg-slate-900 rounded-2xl border border-cyan-400/15 shadow-[0_20px_44px_rgba(3,7,16,0.55)]">
       {/* Title with enhanced glow effect */}
       <h1 className="text-3xl md:text-5xl font-bold text-cyan-400 mb-8 md:mb-12 text-center drop-shadow-[0_0_8px_rgba(34,211,238,0.5)] animate-pulse">
         Incident Analytics Dashboard
@@ -325,6 +350,7 @@ const IncidentAnalyticsDashboard = () => {
         {[
           {
             title: "Hourly Distribution",
+            data: hourlyDistributionData,
             chart: (
               <Bar
                 options={isMobile ? mobileChartOptions : chartOptions}
@@ -334,6 +360,7 @@ const IncidentAnalyticsDashboard = () => {
           },
           {
             title: "Incident Type Distribution",
+            data: incidentTypeData,
             chart: (
               <Pie
                 options={isMobile ? mobileChartOptions : chartOptions}
@@ -343,6 +370,7 @@ const IncidentAnalyticsDashboard = () => {
           },
           {
             title: "Weekly Pattern",
+            data: weeklyPatternData,
             chart: (
               <Bar
                 options={isMobile ? mobileChartOptions : chartOptions}
@@ -352,6 +380,7 @@ const IncidentAnalyticsDashboard = () => {
           },
           {
             title: "Emergency Services Response",
+            data: emergencyServicesData,
             chart: (
               <Bar
                 options={isMobile ? mobileChartOptions : chartOptions}
@@ -368,7 +397,13 @@ const IncidentAnalyticsDashboard = () => {
               {section.title}
             </h3>
             <div className="h-[300px] md:h-[400px] bg-[#001830] rounded-lg p-2 md:p-4 shadow-[inset_-4px_-4px_8px_rgba(0,0,0,0.3),inset_4px_4px_8px_rgba(0,255,255,0.1)] border border-cyan-400/10">
-              {section.chart}
+              {hasChartContent(section.data) ? (
+                section.chart
+              ) : (
+                <div className="h-full flex items-center justify-center rounded-md border border-cyan-400/15 bg-[#001a33] text-cyan-300/80 text-sm text-center px-4">
+                  No data available for this visualization right now.
+                </div>
+              )}
             </div>
           </div>
         ))}

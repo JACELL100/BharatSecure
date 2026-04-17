@@ -29,27 +29,27 @@ const UserProfile = () => {
   }, [userId]);
 
   if (!user) {
-    return <div className="text-center text-blue-500 font-bold mt-10">Loading...</div>;
+    return <div className="text-center text-cyan-300 font-bold mt-10">Loading...</div>;
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-6">
-      <div className="bg-white shadow-lg rounded-lg p-8 max-w-xl w-full">
-        <h1 className="text-2xl font-bold text-gray-800 text-center mb-6">
+    <div className="min-h-screen flex items-center justify-center p-6">
+      <div className="glass-panel shadow-2xl rounded-2xl p-8 max-w-xl w-full text-slate-100 reveal-up">
+        <h1 className="text-2xl font-bold text-slate-100 text-center mb-6 section-title">
           User Profile
         </h1>
-        <p className="text-gray-800"><strong>First Name:</strong> {user.first_name}</p>
-        <p className="text-gray-800"><strong>Last Name:</strong> {user.last_name}</p>
-        <p className="text-gray-800"><strong>Email:</strong> {user.email}</p>
-        <p className="text-gray-800"><strong>Phone:</strong> {user.phone_number}</p>
-        <p className="text-gray-800"><strong>Address:</strong> {user.address}</p>
-        <p className="text-gray-800"><strong>Aadhar Number:</strong> {user.aadhar_number}</p>
-        <p className="text-gray-800"><strong>Emergency Contact 1:</strong> {user.emergency_contact1}</p>
-        <p className="text-gray-800"><strong>Emergency Contact 2:</strong> {user.emergency_contact2}</p>
-        <p className="text-gray-800"><strong>Date Joined:</strong> {user.date_joined}</p>
+        <p className="text-slate-200"><strong>First Name:</strong> {user.first_name}</p>
+        <p className="text-slate-200"><strong>Last Name:</strong> {user.last_name}</p>
+        <p className="text-slate-200"><strong>Email:</strong> {user.email}</p>
+        <p className="text-slate-200"><strong>Phone:</strong> {user.phone_number}</p>
+        <p className="text-slate-200"><strong>Address:</strong> {user.address}</p>
+        <p className="text-slate-200"><strong>Aadhar Number:</strong> {user.aadhar_number}</p>
+        <p className="text-slate-200"><strong>Emergency Contact 1:</strong> {user.emergency_contact1}</p>
+        <p className="text-slate-200"><strong>Emergency Contact 2:</strong> {user.emergency_contact2}</p>
+        <p className="text-slate-200"><strong>Date Joined:</strong> {user.date_joined}</p>
 
         <button
-          className="w-full mt-5 py-3 bg-blue-500 text-white font-semibold rounded-lg shadow-md hover:bg-blue-600 transition"
+          className="w-full mt-5 py-3 glass-button text-white font-semibold rounded-lg transition"
           onClick={() => navigate(-1)}
         >
           Back

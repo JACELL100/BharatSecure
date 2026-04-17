@@ -110,12 +110,13 @@ const Login = () => {
         maxWidth={false}
         disableGutters
         sx={{
-          minHeight: "85vh",
+          minHeight: "88vh",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           padding: isMobile ? "20px 0px" : "44px 0px",
-          background: "linear-gradient(135deg, #0c2461 0%, #1e3799 30%, #0c2461 100%)",
+          background:
+            "radial-gradient(900px 420px at 16% 20%, rgba(54,217,255,0.16), transparent 70%), radial-gradient(850px 420px at 90% 0%, rgba(25,247,194,0.14), transparent 68%), linear-gradient(165deg, rgba(10,14,24,0.98), rgba(6,9,15,0.98))",
           position: "relative",
           overflow: "hidden",
           "&::before": {
@@ -126,7 +127,7 @@ const Login = () => {
             width: "100%",
             height: "100%",
             background: "url('data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" width=\"100\" height=\"100\" opacity=\"0.1\"><circle cx=\"50\" cy=\"50\" r=\"40\" fill=\"none\" stroke=\"%23ffffff\" stroke-width=\"2\"/><path d=\"M50,10 A40,40 0 1,1 50,90 A40,40 0 1,1 50,10 Z\" fill=\"none\" stroke=\"%23ffffff\" stroke-width=\"1\"/><line x1=\"50\" y1=\"10\" x2=\"50\" y2=\"50\" stroke=\"%23ffffff\" stroke-width=\"1\"/><line x1=\"50\" y1=\"50\" x2=\"75\" y2=\"65\" stroke=\"%23ffffff\" stroke-width=\"1\"/></svg>')",
-            opacity: 0.1,
+            opacity: 0.06,
             zIndex: 0,
           },
         }}
@@ -136,15 +137,13 @@ const Login = () => {
             width: isMobile ? "90%" : "500px",
             textAlign: "center",
             padding: isMobile ? 3 : 4,
-            borderRadius: 2,
-            backdropFilter: "blur(10px)",
-            backgroundColor: "rgba(25, 25, 35, 0.7)",
-            boxShadow: `
-              8px 8px 16px rgba(0, 0, 0, 0.5),
-              -4px -4px 10px rgba(255, 255, 255, 0.05),
-              0 0 20px rgba(56, 103, 214, 0.5)
-            `,
-            border: "1px solid rgba(255, 255, 255, 0.1)",
+            borderRadius: 3,
+            backdropFilter: "blur(14px)",
+            background:
+              "linear-gradient(150deg, rgba(18,25,38,0.82), rgba(8,12,20,0.92))",
+            boxShadow:
+              "0 24px 56px rgba(4,8,16,0.62), inset 0 1px 0 rgba(255,255,255,0.06)",
+            border: "1px solid rgba(141,180,230,0.2)",
             position: "relative",
             zIndex: 1,
           }}
@@ -153,10 +152,10 @@ const Login = () => {
             variant={isMobile ? "h5" : "h4"}
             sx={{
               fontWeight: "bold",
-              color: "#fff",
+              color: "#ecf3ff",
               mb: 2,
-              fontFamily: "'Roboto', sans-serif",
-              textShadow: "0 0 10px rgba(255, 255, 255, 0.5)",
+              fontFamily: "Sora, sans-serif",
+              textShadow: "0 0 16px rgba(54,217,255,0.2)",
             }}
           >
             Welcome Back
@@ -165,15 +164,15 @@ const Login = () => {
           <Typography 
             variant="body1" 
             sx={{ 
-              color: "#bbb", 
+              color: "#b5c8e3", 
               mb: 3,
               fontSize: isMobile ? "0.9rem" : "1rem"
             }}
           >
-            Sign in to your CivicConnect account
+            Sign in to your BharatSecure account
           </Typography>
           
-          <Divider sx={{ mb: 4, borderColor: "#555", width: isMobile ? "80%" : "50%", mx: "auto" }} />
+          <Divider sx={{ mb: 4, borderColor: "rgba(141,180,230,0.24)", width: isMobile ? "80%" : "50%", mx: "auto" }} />
           
           <Grid container spacing={isMobile ? 2 : 3}>
             <Grid item xs={12}>
@@ -188,7 +187,7 @@ const Login = () => {
                 error={!!errors.email}
                 helperText={errors.email}
                 sx={{
-                  backgroundColor: "rgba(0, 0, 0, 0.2)",
+                  backgroundColor: "rgba(9, 14, 23, 0.75)",
                   borderRadius: 1,
                   input: {
                     color: "#fff",
@@ -200,14 +199,14 @@ const Login = () => {
                   },
                   "& .MuiOutlinedInput-root": {
                     "& fieldset": {
-                      borderColor: "#555",
+                      borderColor: "rgba(130,166,212,0.35)",
                     },
                     "&:hover fieldset": {
-                      borderColor: "#3498db",
+                      borderColor: "rgba(54,217,255,0.55)",
                     },
                     "&.Mui-focused fieldset": {
-                      borderColor: "#3498db",
-                      boxShadow: "0 0 0 2px rgba(52, 152, 219, 0.2)",
+                      borderColor: "rgba(54,217,255,0.62)",
+                      boxShadow: "0 0 0 2px rgba(54, 217, 255, 0.14)",
                     },
                   },
                   boxShadow: "inset 3px 3px 5px rgba(0, 0, 0, 0.2), inset -2px -2px 4px rgba(255, 255, 255, 0.05)",
@@ -216,7 +215,7 @@ const Login = () => {
                   sx: { 
                     color: "#bbb",
                     "&.Mui-focused": {
-                      color: "#3498db",
+                      color: "#72deff",
                     }
                   },
                 }}
@@ -241,7 +240,7 @@ const Login = () => {
                 error={!!errors.password}
                 helperText={errors.password}
                 sx={{
-                  backgroundColor: "rgba(0, 0, 0, 0.2)",
+                  backgroundColor: "rgba(9, 14, 23, 0.75)",
                   borderRadius: 1,
                   input: {
                     color: "#fff",
@@ -253,14 +252,14 @@ const Login = () => {
                   },
                   "& .MuiOutlinedInput-root": {
                     "& fieldset": {
-                      borderColor: "#555",
+                      borderColor: "rgba(130,166,212,0.35)",
                     },
                     "&:hover fieldset": {
-                      borderColor: "#3498db",
+                      borderColor: "rgba(54,217,255,0.55)",
                     },
                     "&.Mui-focused fieldset": {
-                      borderColor: "#3498db",
-                      boxShadow: "0 0 0 2px rgba(52, 152, 219, 0.2)",
+                      borderColor: "rgba(54,217,255,0.62)",
+                      boxShadow: "0 0 0 2px rgba(54, 217, 255, 0.14)",
                     },
                   },
                   boxShadow: "inset 3px 3px 5px rgba(0, 0, 0, 0.2), inset -2px -2px 4px rgba(255, 255, 255, 0.05)",
@@ -269,7 +268,7 @@ const Login = () => {
                   sx: { 
                     color: "#bbb",
                     "&.Mui-focused": {
-                      color: "#3498db",
+                      color: "#72deff",
                     }
                   },
                 }}
@@ -289,9 +288,9 @@ const Login = () => {
                     checked={formData.rememberMe}
                     onChange={handleCheckboxChange}
                     sx={{ 
-                      color: "#3498db",
+                      color: "#61dbff",
                       "&.Mui-checked": {
-                        color: "#3498db",
+                        color: "#61dbff",
                       }
                     }}
                   />
@@ -309,7 +308,7 @@ const Login = () => {
                 fullWidth
                 size={isMobile ? "medium" : "large"}
                 sx={{
-                  backgroundColor: "#2980b9",
+                  backgroundColor: "rgba(20, 152, 197, 0.82)",
                   color: "#fff",
                   padding: isMobile ? "10px" : "14px 20px",
                   borderRadius: 1,
@@ -319,13 +318,13 @@ const Login = () => {
                   boxShadow: `
                     5px 5px 15px rgba(0, 0, 0, 0.5),
                     -3px -3px 10px rgba(255, 255, 255, 0.05),
-                    0 0 10px rgba(41, 128, 185, 0.5)
+                    0 0 14px rgba(54, 217, 255, 0.32)
                   `,
                   "&:hover": {
-                    backgroundColor: "#3498db",
+                    backgroundColor: "rgba(29, 175, 226, 0.9)",
                     boxShadow: `
-                      0 0 15px rgba(41, 128, 185, 0.8),
-                      0 0 25px rgba(41, 128, 185, 0.4)
+                      0 0 15px rgba(54, 217, 255, 0.6),
+                      0 0 25px rgba(54, 217, 255, 0.34)
                     `,
                   },
                   transition: "all 0.2s ease-in-out",
@@ -340,7 +339,7 @@ const Login = () => {
                 size={isMobile ? "medium" : "large"}
                 sx={{
                   mt: 1.5,
-                  borderColor: "#fff",
+                  borderColor: "rgba(141,180,230,0.45)",
                   color: "#fff",
                   padding: isMobile ? "10px" : "14px 20px",
                   borderRadius: 1,
@@ -348,8 +347,8 @@ const Login = () => {
                   textTransform: "none",
                   fontSize: isMobile ? "0.9rem" : "1rem",
                   "&:hover": {
-                    borderColor: "#3498db",
-                    backgroundColor: "rgba(52, 152, 219, 0.12)",
+                    borderColor: "rgba(54,217,255,0.62)",
+                    backgroundColor: "rgba(54, 217, 255, 0.12)",
                   },
                 }}
                 onClick={handleGoogleLogin}
@@ -381,13 +380,13 @@ const Login = () => {
                 <Link
                   to="/signup"
                   style={{
-                    color: "#3498db",
+                    color: "#61dbff",
                     fontWeight: "bold",
                     textDecoration: "none",
                     position: "relative",
                   }}
-                  onMouseEnter={(e) => (e.target.style.color = "#5dade2")}
-                  onMouseLeave={(e) => (e.target.style.color = "#3498db")}
+                  onMouseEnter={(e) => (e.target.style.color = "#9de9ff")}
+                  onMouseLeave={(e) => (e.target.style.color = "#61dbff")}
                 >
                   Sign Up
                   <span
@@ -397,7 +396,7 @@ const Login = () => {
                       left: 0,
                       width: "100%",
                       height: "1px",
-                      backgroundColor: "#3498db",
+                      backgroundColor: "#61dbff",
                       transform: "scaleX(0)",
                       transition: "transform 0.3s ease-in-out",
                     }}

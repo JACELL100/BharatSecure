@@ -11,10 +11,10 @@ import {
   MenuItem,
   Drawer,
   List,
-  ListItem,
   ListItemButton,
   ListItemText,
   Collapse,
+  Divider,
 } from "@mui/material";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -22,6 +22,23 @@ import logo from "/image.png";
 import MenuIcon from "@mui/icons-material/Menu";
 import ExpandLess from "@mui/icons-material/ExpandLess";
 import ExpandMore from "@mui/icons-material/ExpandMore";
+
+const primaryLinks = [
+  { route: "/", label: "Home" },
+  { route: "/About", label: "About" },
+  { route: "/InciLog", label: "InciLog" },
+];
+
+const featureLinks = [
+  { route: "/report-incident", label: "Report Incident" },
+  { route: "/heatmap", label: "Heatmaps" },
+  { route: "/heatmap2", label: "Incident Type Heatmap" },
+  { route: "/voice-report", label: "Voice Report" },
+  { route: "/chatbot", label: "Saathi AI" },
+  { route: "/upload", label: "VR Viewer" },
+  { route: "/pothole", label: "Pothole Analyzer" },
+  { route: "/video", label: "Video Analysis" },
+];
 
 const Navbar = () => {
   const [anchorEl, setAnchorEl] = useState(null);
@@ -31,115 +48,166 @@ const Navbar = () => {
   const location = useLocation();
   const { isLoggedIn } = useAuth();
 
-  const getActiveLink = () => {
-    if (location.pathname === "/") return "/";
-    return location.pathname;
-  };
+  const activeLink = location.pathname === "/" ? "/" : location.pathname;
+  const featureActive = featureLinks.some((item) => item.route === activeLink);
 
-  const activeLink = getActiveLink();
-
-  const handleMenuClick = (event) => {
-    setAnchorEl(event.currentTarget);
-  };
-
-  const handleMenuClose = () => {
-    setAnchorEl(null);
-  };
-
-  const toggleDrawer = (open) => {
-    setDrawerOpen(open);
-  };
+  const handleMenuOpen = (event) => setAnchorEl(event.currentTarget);
+  const handleMenuClose = () => setAnchorEl(null);
+  const toggleDrawer = (open) => setDrawerOpen(open);
 
   const handleNavigation = (route) => {
     navigate(route);
   };
 
+  const navButtonSx = (route) => ({
+    color: activeLink === route ? "#f2f7ff" : "#b5c7de",
+    fontWeight: 600,
+    fontFamily: "Outfit, sans-serif",
+    letterSpacing: "0.06em",
+    textTransform: "uppercase",
+    borderBottom: activeLink === route ? "2px solid rgba(54,217,255,0.8)" : "2px solid transparent",
+    borderRadius: 0,
+    px: 1,
+    py: 1.5,
+    mx: 1.5,
+    minWidth: "fit-content",
+    transition: "all 0.25s ease",
+    "&:hover": {
+      color: "#eef8ff",
+      borderBottom: "2px solid rgba(54,217,255,0.55)",
+      backgroundColor: "transparent",
+      textShadow: "0 0 18px rgba(54,217,255,0.35)",
+    },
+  });
+
   const sideMenu = (
     <Box
       sx={{
-        width: 250,
+        width: 300,
         height: "100%",
-        backgroundColor: "#0f192c",
-        padding: 2,
         display: "flex",
         flexDirection: "column",
         justifyContent: "space-between",
+        background:
+          "linear-gradient(180deg, rgba(15,22,34,0.96), rgba(8,12,20,0.98))",
+        backdropFilter: "blur(18px)",
+        borderRight: "1px solid rgba(141,180,230,0.2)",
+        p: 2,
       }}
     >
-      <List>
-        {["/", "/About", "/InciLog"].map((route, index) => {
-          const label = route.slice(1) || "Home";
-          return (
-            <ListItemButton
-              key={index}
-              onClick={() => {
-                handleNavigation(route);
-                toggleDrawer(false);
-              }}
+      <List sx={{ pt: 1 }}>
+        {primaryLinks.map((item) => (
+          <ListItemButton
+            key={item.route}
+            onClick={() => {
+              handleNavigation(item.route);
+              toggleDrawer(false);
+            }}
+            sx={{
+              mb: 1,
+              borderRadius: 2,
+              backgroundColor:
+                activeLink === item.route ? "rgba(54,217,255,0.2)" : "transparent",
+              border: activeLink === item.route ? "1px solid rgba(54,217,255,0.4)" : "1px solid transparent",
+              color: activeLink === item.route ? "#f0f8ff" : "#b5c7de",
+              "&:hover": {
+                backgroundColor: "rgba(54,217,255,0.14)",
+                color: "#eef8ff",
+              },
+            }}
+          >
+            <ListItemText
+              primary={item.label}
               sx={{
-                marginBottom: 1,
-                borderRadius: 2,
-                backgroundColor:
-                  activeLink === route ? "#22d3ee" : "transparent",
-                color: activeLink === route ? "#0f192c" : "#fff",
-                "&:hover": {
-                  backgroundColor: "#22d3ee",
-                  color: "#0f192c",
+                textAlign: "left",
+                "& .MuiTypography-root": {
+                  fontFamily: "Outfit, sans-serif",
+                  fontWeight: 600,
+                  letterSpacing: "0.04em",
+                  textTransform: "uppercase",
                 },
               }}
-            >
-              <ListItemText
-                primary={label}
-                sx={{ textAlign: "center", fontWeight: "bold" }}
-              />
-            </ListItemButton>
-          );
-        })}
+            />
+          </ListItemButton>
+        ))}
+
         <ListItemButton
-          onClick={() => setMobileFeaturesOpen(!mobileFeaturesOpen)}
+          onClick={() => setMobileFeaturesOpen((prev) => !prev)}
           sx={{
-            marginBottom: 1,
+            mb: 1,
             borderRadius: 2,
-            backgroundColor: "transparent",
-            color: "#fff",
+            backgroundColor: featureActive ? "rgba(25,247,194,0.12)" : "transparent",
+            border: featureActive
+              ? "1px solid rgba(25,247,194,0.35)"
+              : "1px solid transparent",
+            color: "#d6e6ff",
             "&:hover": {
-              backgroundColor: "#22d3ee",
-              color: "#0f192c",
+              backgroundColor: "rgba(25,247,194,0.14)",
             },
           }}
         >
-          <ListItemText primary="Features" sx={{ textAlign: "center" }} />
+          <ListItemText
+            primary="Features"
+            sx={{
+              "& .MuiTypography-root": {
+                fontFamily: "Sora, sans-serif",
+                fontWeight: 600,
+                letterSpacing: "0.03em",
+              },
+            }}
+          />
           {mobileFeaturesOpen ? <ExpandLess /> : <ExpandMore />}
         </ListItemButton>
+
         <Collapse in={mobileFeaturesOpen} timeout="auto" unmountOnExit>
           <List component="div" disablePadding>
-            {[
-              { route: "/report-incident", label: "Report Incident" },
-              { route: "/heatmap", label: "Heatmaps" },
-              { route: "/heatmap2", label: "Incident Type Heatmap" },
-              { route: "/voice-report", label: "Voice Report" },
-              { route: "/chatbot", label: "Saathi AI" },
-              { route: "/upload", label: "VR Viewer" },
-              { route: "/pothole", label: "Pothole Analyzer" },
-              { route: "/video", label: "Video Analysis" },
-            ].map((item) => (
+            {featureLinks.map((item) => (
               <ListItemButton
                 key={item.route}
-                sx={{ pl: 4, mb: 0.5, borderRadius: 2, color: "#fff", "&:hover": { backgroundColor: "#22d3ee", color: "#0f192c" } }}
+                sx={{
+                  pl: 3,
+                  mb: 0.5,
+                  borderRadius: 2,
+                  color: activeLink === item.route ? "#eef8ff" : "#b5c7de",
+                  backgroundColor:
+                    activeLink === item.route ? "rgba(54,217,255,0.15)" : "transparent",
+                  "&:hover": {
+                    backgroundColor: "rgba(54,217,255,0.12)",
+                    color: "#eef8ff",
+                  },
+                }}
                 onClick={() => {
                   handleNavigation(item.route);
                   toggleDrawer(false);
                 }}
               >
-                <ListItemText primary={item.label} sx={{ textAlign: "center", fontSize: '0.9rem' }} />
+                <ListItemText
+                  primary={item.label}
+                  sx={{
+                    "& .MuiTypography-root": {
+                      fontFamily: "Outfit, sans-serif",
+                      fontSize: "0.88rem",
+                    },
+                  }}
+                />
               </ListItemButton>
             ))}
           </List>
         </Collapse>
       </List>
-      <Box sx={{ textAlign: "center", paddingTop: 2 }}>
-        <Typography variant="caption" sx={{ color: "#22d3ee" }}>
-          BharatSecure © {new Date().getFullYear()}
+
+      <Box sx={{ textAlign: "left", px: 1, pb: 1 }}>
+        <Divider sx={{ borderColor: "rgba(141,180,230,0.2)", mb: 1.5 }} />
+        <Typography
+          variant="caption"
+          sx={{
+            color: "#8fa6c7",
+            letterSpacing: "0.05em",
+            fontFamily: "Outfit, sans-serif",
+            textTransform: "uppercase",
+          }}
+        >
+          BharatSecure {new Date().getFullYear()}
         </Typography>
       </Box>
     </Box>
@@ -149,61 +217,59 @@ const Navbar = () => {
     <AppBar
       position="sticky"
       sx={{
-        backgroundColor: "#0f192c",
+        background:
+          "linear-gradient(120deg, rgba(10,14,22,0.78), rgba(14,22,35,0.88))",
+        backdropFilter: "blur(14px)",
+        borderBottom: "1px solid rgba(141,180,230,0.2)",
         boxShadow:
-          "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
-        padding: "0 20px",
-        "@media (max-width: 450px)": {
-          padding: "0",
-        },
+          "0 12px 34px rgba(2,6,16,0.48), inset 0 1px 0 rgba(255,255,255,0.05)",
       }}
     >
-      <Container
-        sx={{
-          "@media (max-width: 450px)": {
-            padding: "0",
-          },
-        }}
-      >
+      <Container maxWidth="xl">
         <Toolbar
+          disableGutters
           sx={{
+            minHeight: 78,
+            px: { xs: 0.5, sm: 1.5 },
             display: "flex",
-            justifyContent: "space-between",
             alignItems: "center",
-            "@media (max-width: 450px)": {
-              padding: "0",
-            },
+            justifyContent: "space-between",
           }}
         >
           <Box sx={{ display: "flex", alignItems: "center" }}>
             <IconButton
               onClick={() => handleNavigation("/")}
               sx={{
-                p: 1,
+                p: 0.5,
+                borderRadius: "50%",
+                border: "1px solid rgba(141,180,230,0.35)",
+                boxShadow: "0 0 0 4px rgba(54,217,255,0.09)",
                 "&:hover": {
-                  backgroundColor: "rgba(34, 211, 238, 0.1)",
+                  backgroundColor: "rgba(54,217,255,0.1)",
                 },
               }}
             >
               <img
                 src={logo}
                 alt="Logo"
-                style={{ width: 40, height: 40, marginRight: 10, borderRadius:"50%" }}
+                style={{ width: 42, height: 42, borderRadius: "50%" }}
               />
             </IconButton>
+
             <Link to="/" style={{ textDecoration: "none" }}>
               <Typography
                 variant="h6"
                 sx={{
-                  fontWeight: "semibold",
-                  color: "#22d3ee",
-                  fontFamily: "Smooch Sans, sans-serif",
-                  fontSize: "3rem",
+                  ml: 1.5,
+                  color: "#f2f7ff",
+                  fontFamily: "Sora, sans-serif",
+                  fontWeight: 700,
+                  letterSpacing: "0.03em",
+                  fontSize: { xs: "1.25rem", sm: "1.55rem" },
+                  textShadow: "0 0 24px rgba(54,217,255,0.22)",
+                  transition: "all 0.25s ease",
                   "&:hover": {
-                    color: "#0891b2",
-                  },
-                  "@media (max-width: 450px)": {
-                    fontSize: "2rem",
+                    color: "#dcf4ff",
                   },
                 }}
               >
@@ -215,113 +281,104 @@ const Navbar = () => {
           <Box
             sx={{
               display: { xs: "none", md: "flex" },
-              flexGrow: 1,
+              alignItems: "center",
               justifyContent: "center",
+              flex: 1,
+              ml: 3,
             }}
           >
-            {["/", "/About", "/InciLog"].map((route, index) => {
-              const label = route.slice(1) || "Home";
-              return (
-                <Button
-                  key={index}
-                  sx={{
-                    color: "#fff",
-                    fontWeight: "bold",
-                    margin: "0 20px",
-                    borderBottom:
-                      activeLink === route ? "2px solid #22d3ee" : "none",
-                    "&:hover": {
-                      color: "#22d3ee",
-                      backgroundColor: "transparent",
-                    },
-                  }}
-                  onClick={() => handleNavigation(route)}
-                >
-                  {label.toUpperCase()}
-                </Button>
-              );
-            })}
+            {primaryLinks.map((item) => (
+              <Button
+                key={item.route}
+                sx={navButtonSx(item.route)}
+                onClick={() => handleNavigation(item.route)}
+              >
+                {item.label}
+              </Button>
+            ))}
+
             <Button
               sx={{
-                color: "#fff",
-                fontWeight: "bold",
-                margin: "0 20px",
-                borderBottom: [
-                  "/report-incident",
-                  "/heatmap",
-                  "/voice-report",
-                ].includes(activeLink)
-                  ? "2px solid #22d3ee"
-                  : "none",
+                ...navButtonSx("/feature-anchor"),
+                color: featureActive ? "#f2f7ff" : "#b5c7de",
+                borderBottom: featureActive
+                  ? "2px solid rgba(25,247,194,0.75)"
+                  : "2px solid transparent",
                 "&:hover": {
-                  color: "#22d3ee",
+                  color: "#eef8ff",
+                  borderBottom: "2px solid rgba(25,247,194,0.5)",
                   backgroundColor: "transparent",
                 },
               }}
-              onMouseEnter={handleMenuClick}
-              onClick={handleMenuClick}
-              onMouseLeave={(event) => {
-                const isOverMenu =
-                  event.relatedTarget?.closest(".MuiMenu-root");
-                if (!isOverMenu) handleMenuClose();
-              }}
+              onMouseEnter={handleMenuOpen}
+              onClick={handleMenuOpen}
             >
               Features
             </Button>
           </Box>
 
-          {!isLoggedIn ? (
-            <Link to="/login" style={{ textDecoration: "none" }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+            {!isLoggedIn ? (
+              <Link to="/login" style={{ textDecoration: "none" }}>
+                <Button
+                  sx={{
+                    color: "#e8f4ff",
+                    border: "1px solid rgba(54,217,255,0.45)",
+                    background:
+                      "linear-gradient(130deg, rgba(20,28,43,0.92), rgba(12,16,27,0.95))",
+                    px: { xs: 1.8, sm: 2.5 },
+                    py: 1,
+                    fontFamily: "Outfit, sans-serif",
+                    "&:hover": {
+                      borderColor: "rgba(25,247,194,0.55)",
+                      boxShadow:
+                        "0 10px 20px rgba(7,16,32,0.6), 0 0 0 1px rgba(25,247,194,0.24)",
+                    },
+                  }}
+                >
+                  Login
+                </Button>
+              </Link>
+            ) : (
               <Button
                 sx={{
-                  color: "#22d3ee",
-                  fontWeight: "bold",
-                  border: "2px solid #22d3ee",
-                  borderRadius: 3,
+                  color: "#e8f4ff",
+                  border: "1px solid rgba(25,247,194,0.45)",
+                  background:
+                    "linear-gradient(130deg, rgba(17,28,31,0.92), rgba(11,19,23,0.95))",
+                  px: { xs: 1.8, sm: 2.5 },
+                  py: 1,
+                  fontFamily: "Outfit, sans-serif",
                   "&:hover": {
-                    backgroundColor: "#22d3ee",
-                    color: "#0f192c",
+                    borderColor: "rgba(54,217,255,0.55)",
+                    boxShadow:
+                      "0 10px 20px rgba(7,16,32,0.6), 0 0 0 1px rgba(54,217,255,0.24)",
                   },
                 }}
+                onClick={() => {
+                  const userType = localStorage.getItem("userType");
+                  handleNavigation(userType === "user" ? "/my-reports" : "/admin");
+                }}
               >
-                Login
+                Dashboard
               </Button>
-            </Link>
-          ) : (
-            <Button
+            )}
+
+            <IconButton
               sx={{
-                color: "#22d3ee",
-                fontWeight: "bold",
-                border: "2px solid #22d3ee",
-                borderRadius: 3,
+                display: { xs: "inline-flex", md: "none" },
+                color: "#d8ecff",
+                border: "1px solid rgba(141,180,230,0.35)",
+                backgroundColor: "rgba(15,22,34,0.7)",
                 "&:hover": {
-                  backgroundColor: "#22d3ee",
-                  color: "#0f192c",
+                  backgroundColor: "rgba(25,36,57,0.9)",
                 },
               }}
-              onClick={() => {
-                const user_type = localStorage.getItem("userType");
-                handleNavigation(
-                  user_type === "user" ? "/my-reports" : "/admin"
-                );
-              }}
+              onClick={() => toggleDrawer(true)}
             >
-              Dashboard
-            </Button>
-          )}
-
-          <IconButton
-            sx={{
-              display: { xs: "block", md: "none" },
-              color: "#22d3ee",
-              "&:hover": {
-                backgroundColor: "rgba(34, 211, 238, 0.1)",
-              },
-            }}
-            onClick={() => toggleDrawer(true)}
-          >
-            <MenuIcon />
-          </IconButton>
+              <MenuIcon />
+            </IconButton>
+          </Box>
         </Toolbar>
       </Container>
 
@@ -335,40 +392,35 @@ const Navbar = () => {
         }}
         sx={{
           "& .MuiPaper-root": {
-            backgroundColor: "#0f192c",
+            mt: 1.5,
             borderRadius: 2,
-            boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.3)",
-            minWidth: 180,
+            minWidth: 250,
+            background:
+              "linear-gradient(150deg, rgba(18, 25, 38, 0.95), rgba(9, 13, 24, 0.98))",
+            border: "1px solid rgba(141, 180, 230, 0.24)",
+            boxShadow:
+              "0 20px 44px rgba(3, 7, 16, 0.62), inset 0 1px 0 rgba(255,255,255,0.06)",
+            backdropFilter: "blur(14px)",
           },
           "& .MuiMenuItem-root": {
-            padding: "10px 20px",
-            fontSize: "1rem",
-            color: "#fff",
+            color: "#d7e8ff",
+            fontFamily: "Outfit, sans-serif",
+            py: 1.1,
+            borderRadius: 1,
+            margin: "4px 6px",
             "&:hover": {
-              backgroundColor: "#22d3ee",
-              color: "#0f192c",
-              fontWeight: "bold",
+              color: "#f2f8ff",
+              backgroundColor: "rgba(54,217,255,0.14)",
             },
           },
         }}
       >
-        {[
-          { route: "/report-incident", label: "Report Incident" },
-          { route: "/heatmap", label: "Heatmaps" },
-          { route: "/heatmap2", label: "Incident Type Heatmap" },
-          { route: "/voice-report", label: "Voice Report" },
-          { route: "/chatbot", label: "Saathi AI" },
-          { route: "/upload", label: "VR Viewer" },
-          { route: "/pothole", label: "Pothole Analyzer" },
-          { route: "/video", label: "Video Analysis" },
-          
-        ].map((item) => (
+        {featureLinks.map((item) => (
           <MenuItem
             key={item.route}
             onClick={() => {
               handleNavigation(item.route);
               handleMenuClose();
-              toggleDrawer(false);
             }}
           >
             {item.label}
@@ -376,11 +428,7 @@ const Navbar = () => {
         ))}
       </Menu>
 
-      <Drawer
-        anchor="left"
-        open={drawerOpen}
-        onClose={() => toggleDrawer(false)}
-      >
+      <Drawer anchor="left" open={drawerOpen} onClose={() => toggleDrawer(false)}>
         {sideMenu}
       </Drawer>
     </AppBar>

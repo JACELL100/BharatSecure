@@ -1,9 +1,66 @@
-/* HTML: <div class="loader"></div> */
 @import "leaflet/dist/leaflet.css";
 
-body {
-  font-family: "Montserrat", serif;
-  font-optical-sizing: auto;
+.app-shell {
+  position: relative;
+  min-height: 100vh;
+}
+
+.app-background {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.bg-grid {
+  position: absolute;
+  inset: 0;
+  opacity: 0.26;
+  background-image:
+    linear-gradient(rgba(79, 124, 176, 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(79, 124, 176, 0.1) 1px, transparent 1px);
+  background-size: 70px 70px;
+  mask-image: radial-gradient(circle at center, black 36%, transparent 82%);
+}
+
+.bg-orb {
+  position: absolute;
+  border-radius: 999px;
+  filter: blur(10px);
+  opacity: 0.5;
+  animation: float-orb 16s ease-in-out infinite;
+}
+
+.bg-orb-1 {
+  width: 460px;
+  height: 460px;
+  top: -140px;
+  left: -130px;
+  background: radial-gradient(circle at 35% 30%, rgba(54, 217, 255, 0.55), rgba(54, 217, 255, 0));
+}
+
+.bg-orb-2 {
+  width: 380px;
+  height: 380px;
+  right: -120px;
+  top: 15%;
+  animation-delay: 3s;
+  background: radial-gradient(circle at 50% 50%, rgba(25, 247, 194, 0.4), rgba(25, 247, 194, 0));
+}
+
+.bg-orb-3 {
+  width: 500px;
+  height: 500px;
+  right: 20%;
+  bottom: -240px;
+  animation-delay: 6s;
+  background: radial-gradient(circle at 50% 50%, rgba(255, 147, 76, 0.2), rgba(255, 147, 76, 0));
+}
+
+.content-layer {
+  position: relative;
+  z-index: 2;
 }
 
 .loader {
@@ -12,81 +69,35 @@ body {
   width: 50px;
   aspect-ratio: 1;
   border-radius: 50%;
-  border: 8px solid #514b82;
+  border: 8px solid #2d4468;
   animation: l20-1 0.8s infinite linear alternate, l20-2 1.6s infinite linear;
   z-index: 999;
 }
+
 @keyframes l20-1 {
   0% {
     clip-path: polygon(50% 50%, 0 0, 50% 0%, 50% 0%, 50% 0%, 50% 0%, 50% 0%);
   }
   12.5% {
-    clip-path: polygon(
-      50% 50%,
-      0 0,
-      50% 0%,
-      100% 0%,
-      100% 0%,
-      100% 0%,
-      100% 0%
-    );
+    clip-path: polygon(50% 50%, 0 0, 50% 0%, 100% 0%, 100% 0%, 100% 0%, 100% 0%);
   }
   25% {
-    clip-path: polygon(
-      50% 50%,
-      0 0,
-      50% 0%,
-      100% 0%,
-      100% 100%,
-      100% 100%,
-      100% 100%
-    );
+    clip-path: polygon(50% 50%, 0 0, 50% 0%, 100% 0%, 100% 100%, 100% 100%, 100% 100%);
   }
   50% {
-    clip-path: polygon(
-      50% 50%,
-      0 0,
-      50% 0%,
-      100% 0%,
-      100% 100%,
-      50% 100%,
-      0% 100%
-    );
+    clip-path: polygon(50% 50%, 0 0, 50% 0%, 100% 0%, 100% 100%, 50% 100%, 0% 100%);
   }
   62.5% {
-    clip-path: polygon(
-      50% 50%,
-      100% 0,
-      100% 0%,
-      100% 0%,
-      100% 100%,
-      50% 100%,
-      0% 100%
-    );
+    clip-path: polygon(50% 50%, 100% 0, 100% 0%, 100% 0%, 100% 100%, 50% 100%, 0% 100%);
   }
   75% {
-    clip-path: polygon(
-      50% 50%,
-      100% 100%,
-      100% 100%,
-      100% 100%,
-      100% 100%,
-      50% 100%,
-      0% 100%
-    );
+    clip-path: polygon(50% 50%, 100% 100%, 100% 100%, 100% 100%, 100% 100%, 50% 100%, 0% 100%);
   }
   100% {
-    clip-path: polygon(
-      50% 50%,
-      50% 100%,
-      50% 100%,
-      50% 100%,
-      50% 100%,
-      50% 100%,
-      0% 100%
-    );
+    clip-path: polygon(50% 50%, 50% 100%, 50% 100%, 50% 100%, 50% 100%, 50% 100%, 0% 100%);
   }
 }
+
 @keyframes l20-2 {
   0% {
     transform: scaleY(1) rotate(0deg);
@@ -118,34 +129,12 @@ body {
   animation: border-rotate 4s linear infinite;
 }
 
-* {
-  scrollbar-width: thin;
-  scrollbar-color: #60a5fa transparent; /* Light blue thumb, transparent track */
-}
-
-/* For webkit browsers like Chrome, Safari */
-*::-webkit-scrollbar {
-  width: 6px; /* Made thinner */
-  height: 6px;
-}
-
-*::-webkit-scrollbar-track {
-  background: transparent;
-  border-radius: 20px;
-}
-
-*::-webkit-scrollbar-thumb {
-  background-color: #60a5fa; /* Light blue color */
-  border-radius: 20px;
-  border: 2px solid transparent; /* Creates padding effect */
-  background-clip: padding-box;
-  transition: background-color 0.2s ease;
-}
-
-*::-webkit-scrollbar-thumb:hover {
-  background-color: #3b82f6; /* Slightly darker on hover */
-}
-
-*::-webkit-scrollbar-button {
-  display: none; /* Removes the scroll buttons */
+@keyframes float-orb {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(0, -28px, 0) scale(1.06);
+  }
 }

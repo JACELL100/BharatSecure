@@ -36,7 +36,7 @@ const AboutUs = () => {
   };
 
   return (
-    <div style={{ fontFamily: "ubuntu", backgroundColor: "white" }}>
+    <div className="min-h-screen text-slate-100">
       <Hero onLearnMore={scrollToFeatures} />
 
       <Suspense
@@ -46,7 +46,9 @@ const AboutUs = () => {
           </div>
         }
       >
-        <AboutUsDetails />
+        <div className="mx-4 sm:mx-6 lg:mx-8 my-6 glass-panel rounded-3xl overflow-hidden reveal-up">
+          <AboutUsDetails />
+        </div>
       </Suspense>
 
       <Suspense
@@ -56,7 +58,9 @@ const AboutUs = () => {
           </div>
         }
       >
-        <Features ref={featuresRef} />
+        <div className="mx-4 sm:mx-6 lg:mx-8 my-6 glass-panel rounded-3xl overflow-hidden reveal-up">
+          <Features ref={featuresRef} />
+        </div>
       </Suspense>
 
       <Suspense
@@ -66,7 +70,9 @@ const AboutUs = () => {
           </div>
         }
       >
-        <Video />
+        <div className="mx-4 sm:mx-6 lg:mx-8 my-6 glass-panel rounded-3xl overflow-hidden reveal-up">
+          <Video />
+        </div>
       </Suspense>
 
       <Suspense
@@ -76,7 +82,9 @@ const AboutUs = () => {
           </div>
         }
       >
-        <Team />
+        <div className="mx-4 sm:mx-6 lg:mx-8 my-6 glass-panel rounded-3xl overflow-hidden reveal-up">
+          <Team />
+        </div>
       </Suspense>
 
       <Suspense
@@ -86,9 +94,11 @@ const AboutUs = () => {
           </div>
         }
       >
-        <Footer />
+        <div className="mx-4 sm:mx-6 lg:mx-8 mt-6 mb-10 glass-panel rounded-3xl overflow-hidden reveal-up">
+          <Footer />
+        </div>
       </Suspense>
-      <FloatingChatbot/>
+      <FloatingChatbot />
     </div>
   );
 };

@@ -5,9 +5,14 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        dosis: ["Dosis", "sans-serif"],
-        smooch: ["Smooch Sans", "sans-serif"],
-        ubuntu: ["Ubuntu", "sans-serif"],
+        dosis: ["Outfit", "sans-serif"],
+        smooch: ["Space Grotesk", "sans-serif"],
+        ubuntu: ["Outfit", "sans-serif"],
+        inter: ["Outfit", "sans-serif"],
+        poppins: ["Sora", "sans-serif"],
+        outfit: ["Outfit", "sans-serif"],
+        sora: ["Sora", "sans-serif"],
+        grotesk: ["Space Grotesk", "sans-serif"],
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -57,18 +62,38 @@ export default {
         },
       },
       animation: {
-        moveToCorner: "moveToCorner 1.5s ease-out forwards", // The duration and timing of the animation
+        moveToCorner: "moveToCorner 1.5s ease-out forwards",
+        "fade-in-up": "fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+        "float": "float 6s ease-in-out infinite",
+        "pulse-glow": "pulseGlow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+        "slide-in-right": "slideInRight 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards",
       },
       keyframes: {
         moveToCorner: {
           "0%": {
-            transform: "translate(-50%, -50%)", // Start from center
+            transform: "translate(-50%, -50%)",
             opacity: "0",
           },
           "100%": {
-            transform: "translate(0, 0)", // End at bottom-right corner
+            transform: "translate(0, 0)",
             opacity: "1",
           },
+        },
+        fadeInUp: {
+          "0%": { opacity: 0, transform: "translateY(30px)" },
+          "100%": { opacity: 1, transform: "translateY(0)" },
+        },
+        float: {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-15px)" },
+        },
+        pulseGlow: {
+          "0%, 100%": { opacity: 1, filter: "brightness(100%) drop-shadow(0 0 10px rgba(99,102,241,0.5))" },
+          "50%": { opacity: .7, filter: "brightness(150%) drop-shadow(0 0 25px rgba(99,102,241,0.8))" },
+        },
+        slideInRight: {
+          "0%": { opacity: 0, transform: "translateX(50px)" },
+          "100%": { opacity: 1, transform: "translateX(0)" },
         },
       },
     },

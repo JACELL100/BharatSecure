@@ -1,82 +1,76 @@
 import React from "react";
 
+const testimonials = [
+  {
+    name: "Arjun",
+    role: "Civil Engineer",
+    testimonial:
+      "The incident reporting system made it incredibly easy to report accidents and emergencies. Response was quick and structured.",
+    image:
+      "https://images.ctfassets.net/h6goo9gw1hh6/2sNZtFAWOdP1lmQ33VwRN3/24e953b920a9cd0ff2e1d587742a2472/1-intro-photo-final.jpg?w=1200&h=992&fl=progressive&q=70&fm=jpg",
+  },
+  {
+    name: "Priya",
+    role: "Teacher",
+    testimonial:
+      "Reporting road hazards now feels effortless. The interface is clear, smooth, and gives confidence that reports are taken seriously.",
+    image:
+      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRsynwv-5qtogtOwJbIjaPFJUmHpzhxgqIAug&s",
+  },
+  {
+    name: "Aryan",
+    role: "Firefighter",
+    testimonial:
+      "As a first responder, I value how quickly incidents are tracked and prioritized. Communication with citizens is noticeably better.",
+    image:
+      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRC8kiSH5ZSAcVoj3tAQQDoP_ux0sSricMyUg&s",
+  },
+];
+
 const Testimonials = () => {
-  const testimonials = [
-    {
-      name: "Arjun",
-      role: "Civil Engineer",
-      testimonial:
-        "The incident reporting system made it incredibly easy to report accidents and health emergencies. The response time was fast, and the authorities acted immediately!",
-      image: "https://images.ctfassets.net/h6goo9gw1hh6/2sNZtFAWOdP1lmQ33VwRN3/24e953b920a9cd0ff2e1d587742a2472/1-intro-photo-final.jpg?w=1200&h=992&fl=progressive&q=70&fm=jpg", // Using placeholder since external images aren't allowed
-    },
-    {
-      name: "Priya",
-      role: "Teacher",
-      testimonial:
-        "I love how easy it was to report a road hazard using the system. It's user-friendly, and I felt that my report was handled with urgency and care.",
-      image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRsynwv-5qtogtOwJbIjaPFJUmHpzhxgqIAug&s",
-    },
-    {
-      name: "Aryan",
-      role: "Firefighter",
-      testimonial:
-        "As a first responder, I appreciate how quickly incidents are reported and tracked. This platform has definitely improved communication with the community.",
-      image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRC8kiSH5ZSAcVoj3tAQQDoP_ux0sSricMyUg&s",
-    },
-  ];
-
   return (
-    <div className="bg-slate-900 py-16 px-4 min-h-screen">
-      <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-cyan-400 mb-6 drop-shadow-[0_0_15px_rgba(34,211,238,0.5)]">
-            What Our Users Say
-          </h2>
-          <p className="text-lg md:text-xl text-slate-300 max-w-2xl mx-auto">
-            Real experiences from people who have used our system to report
-            incidents and receive help.
-          </p>
-        </div>
+    <section className="rounded-3xl px-2 py-4 sm:p-4">
+      <div className="text-center mb-10">
+        <p className="text-xs sm:text-sm uppercase tracking-[0.2em] text-emerald-200/80">
+          Voices From The Community
+        </p>
+        <h2 className="section-title mt-3 text-3xl md:text-4xl lg:text-5xl font-extrabold">
+          People Trusting BharatSecure
+        </h2>
+        <p className="text-sm sm:text-base text-slate-300 max-w-3xl mx-auto mt-4">
+          Real feedback from users who reported incidents and received faster,
+          better coordinated support.
+        </p>
+      </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {testimonials.map((testimonial, index) => (
-            <div
-              key={index}
-              className="bg-slate-800 rounded-2xl p-6 shadow-[inset_-8px_-8px_12px_rgba(0,0,0,0.3),inset_8px_8px_12px_rgba(255,255,255,0.1)] 
-                         hover:shadow-[0_0_20px_rgba(34,211,238,0.2)] transition-all duration-300 
-                         transform hover:scale-105 group"
-            >
-              <div className="flex items-center mb-6">
-                <div className="relative">
-                  <div
-                    className="w-16 h-16 rounded-full bg-slate-700 
-                                shadow-[inset_-4px_-4px_8px_rgba(0,0,0,0.3),inset_4px_4px_8px_rgba(255,255,255,0.1)]
-                                group-hover:shadow-[0_0_15px_rgba(34,211,238,0.3)] transition-all duration-300"
-                  >
-                    <img
-                      src={testimonial.image}
-                      alt={testimonial.name}
-                      className="w-full h-full rounded-full object-cover opacity-80"
-                    />
-                  </div>
-                </div>
-                <div className="ml-4">
-                  <h3 className="text-xl font-semibold text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.3)]">
-                    {testimonial.name}
-                  </h3>
-                  <p className="text-sm text-slate-400">{testimonial.role}</p>
-                </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+        {testimonials.map((item, index) => (
+          <article
+            key={item.name}
+            className="glass-panel rounded-2xl p-6 transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_24px_55px_rgba(4,8,18,0.62)] reveal-up"
+            style={{ animationDelay: `${index * 90}ms` }}
+          >
+            <div className="flex items-center gap-4 mb-5">
+              <div className="h-14 w-14 rounded-full overflow-hidden border border-cyan-200/25 shadow-[0_0_0_6px_rgba(54,217,255,0.08)]">
+                <img
+                  src={item.image}
+                  alt={item.name}
+                  className="w-full h-full object-cover"
+                />
               </div>
-              <div className="relative">
-                <p className="text-slate-300 italic relative z-10">
-                  {testimonial.testimonial}
+              <div>
+                <h3 className="text-lg font-semibold text-slate-100">{item.name}</h3>
+                <p className="text-xs tracking-[0.16em] uppercase text-cyan-200/80">
+                  {item.role}
                 </p>
               </div>
             </div>
-          ))}
-        </div>
+
+            <p className="text-slate-300 leading-relaxed italic">"{item.testimonial}"</p>
+          </article>
+        ))}
       </div>
-    </div>
+    </section>
   );
 };
 

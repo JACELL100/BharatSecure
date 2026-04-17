@@ -39,6 +39,8 @@ const IncidentDashboardUser = () => {
   const [loading, setLoading] = useState(true);
   const API_URL = import.meta.env.VITE_API_URL;
 
+  const hasData = (arr) => Array.isArray(arr) && arr.length > 0;
+
   useEffect(() => {
     const fetchStats = async () => {
       try {
@@ -108,7 +110,7 @@ const IncidentDashboardUser = () => {
   }
 
   return (
-    <div className="p-4 md:p-8 bg-[#001830] min-h-screen">
+    <div className="p-4 md:p-8 bg-[#001830] rounded-2xl border border-cyan-400/15 shadow-[0_20px_44px_rgba(3,7,16,0.55)]">
       {/* Header Section */}
       <div className="mb-6 md:mb-8">
         <h1 className="text-2xl md:text-4xl font-bold text-cyan-400 mb-2 p-3 md:p-4 rounded-xl shadow-[inset_-5px_-5px_15px_rgba(0,0,0,0.3),_inset_5px_5px_15px_rgba(0,255,255,0.1)] border border-cyan-400/20">
@@ -133,7 +135,7 @@ const IncidentDashboardUser = () => {
 
       {/* Summary Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-6 md:mb-8">
-        <div className="bg-[#002345] rounded-xl p-4 md:p-6 shadow-[5px_5px_15px_rgba(0,0,0,0.3),-5px_-5px_15px_rgba(0,255,255,0.1)] border border-cyan-400/20 transform transition-all hover:shadow-[inset_5px_5px_15px_rgba(0,0,0,0.2),inset_-5px_-5px_15px_rgba(0,0,255,0.1)]">
+        <div className="bg-[#002345] rounded-xl p-4 md:p-6 shadow-[0_14px_28px_rgba(4,8,16,0.52)] border border-cyan-400/20 transform transition-all hover:shadow-[0_0_20px_rgba(34,211,238,0.24)]">
           <div className="text-2xl md:text-3xl font-bold text-cyan-400">
             {stats.total_incidents}
           </div>
@@ -141,7 +143,7 @@ const IncidentDashboardUser = () => {
             Total Incidents
           </div>
         </div>
-        <div className="bg-[#002345] rounded-xl p-4 md:p-6 shadow-[5px_5px_15px_rgba(0,0,0,0.3),-5px_-5px_15px_rgba(0,255,255,0.1)] border border-cyan-400/20 transform transition-all hover:shadow-[inset_5px_5px_15px_rgba(0,0,0,0.2),inset_-5px_-5px_15px_rgba(0,0,255,0.1)]">
+        <div className="bg-[#002345] rounded-xl p-4 md:p-6 shadow-[0_14px_28px_rgba(4,8,16,0.52)] border border-cyan-400/20 transform transition-all hover:shadow-[0_0_20px_rgba(34,211,238,0.24)]">
           <div className="text-2xl md:text-3xl font-bold text-cyan-400">
             {stats.average_score?.toFixed(1) || "N/A"}
           </div>
@@ -159,35 +161,41 @@ const IncidentDashboardUser = () => {
             Incident Types Distribution
           </h2>
           <div className="w-full h-64 md:h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={stats.incident_types}
-                  dataKey="count"
-                  nameKey="incidentType"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius="70%"
-                  label
-                >
-                  {stats.incident_types.map((entry, index) => (
-                    <Cell key={index} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "#002345",
-                    border: "1px solid rgba(0,255,255,0.2)",
-                    color: "cyan",
-                    fontSize: "12px",
-                  }}
-                  itemStyle={{
-                    color: "cyan",
-                  }}
-                />
-                <Legend wrapperStyle={{ fontSize: "12px" }} />
-              </PieChart>
-            </ResponsiveContainer>
+            {hasData(stats.incident_types) ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={stats.incident_types}
+                    dataKey="count"
+                    nameKey="incidentType"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius="70%"
+                    label
+                  >
+                    {stats.incident_types.map((entry, index) => (
+                      <Cell key={index} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "#002345",
+                      border: "1px solid rgba(0,255,255,0.2)",
+                      color: "cyan",
+                      fontSize: "12px",
+                    }}
+                    itemStyle={{
+                      color: "cyan",
+                    }}
+                  />
+                  <Legend wrapperStyle={{ fontSize: "12px" }} />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex items-center justify-center rounded-lg border border-cyan-400/15 bg-[#001a33] text-cyan-300/80 text-sm">
+                No incident type data available.
+              </div>
+            )}
           </div>
         </div>
 
@@ -197,43 +205,49 @@ const IncidentDashboardUser = () => {
             Monthly Incident Trend
           </h2>
           <div className="w-full h-64 md:h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={stats.monthly_trend}>
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="rgba(0,255,255,0.1)"
-                />
-                <XAxis
-                  dataKey="month"
-                  tickFormatter={(date) => new Date(date).toLocaleDateString()}
-                  stroke="#00ffff"
-                  fontSize={12}
-                  angle={-45}
-                  textAnchor="end"
-                  height={60}
-                />
-                <YAxis stroke="#00ffff" fontSize={12} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "#002345",
-                    border: "1px solid rgba(0,255,255,0.2)",
-                    color: "cyan",
-                    fontSize: "12px",
-                  }}
-                  itemStyle={{
-                    color: "cyan",
-                  }}
-                />
-                <Legend wrapperStyle={{ fontSize: "12px" }} />
-                <Line
-                  type="monotone"
-                  dataKey="count"
-                  stroke="#00ffff"
-                  name="Incidents"
-                  strokeWidth={2}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            {hasData(stats.monthly_trend) ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={stats.monthly_trend}>
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke="rgba(0,255,255,0.1)"
+                  />
+                  <XAxis
+                    dataKey="month"
+                    tickFormatter={(date) => new Date(date).toLocaleDateString()}
+                    stroke="#00ffff"
+                    fontSize={12}
+                    angle={-45}
+                    textAnchor="end"
+                    height={60}
+                  />
+                  <YAxis stroke="#00ffff" fontSize={12} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "#002345",
+                      border: "1px solid rgba(0,255,255,0.2)",
+                      color: "cyan",
+                      fontSize: "12px",
+                    }}
+                    itemStyle={{
+                      color: "cyan",
+                    }}
+                  />
+                  <Legend wrapperStyle={{ fontSize: "12px" }} />
+                  <Line
+                    type="monotone"
+                    dataKey="count"
+                    stroke="#00ffff"
+                    name="Incidents"
+                    strokeWidth={2}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex items-center justify-center rounded-lg border border-cyan-400/15 bg-[#001a33] text-cyan-300/80 text-sm">
+                No monthly trend data available.
+              </div>
+            )}
           </div>
         </div>
 
@@ -243,32 +257,38 @@ const IncidentDashboardUser = () => {
             Severity Distribution
           </h2>
           <div className="w-full h-64 md:h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={stats.severity_distribution}>
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="rgba(0,255,255,0.1)"
-                />
-                <XAxis dataKey="severity" stroke="#00ffff" fontSize={12} />
-                <YAxis stroke="#00ffff" fontSize={12} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "#002345",
-                    border: "1px solid rgba(0,255,255,0.2)",
-                    color: "cyan",
-                    fontSize: "12px",
-                  }}
-                  itemStyle={{
-                    color: "cyan",
-                  }}
-                />
-                <Bar dataKey="count">
-                  {stats.severity_distribution.map((entry, index) => (
-                    <Cell key={index} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+            {hasData(stats.severity_distribution) ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={stats.severity_distribution}>
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke="rgba(0,255,255,0.1)"
+                  />
+                  <XAxis dataKey="severity" stroke="#00ffff" fontSize={12} />
+                  <YAxis stroke="#00ffff" fontSize={12} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "#002345",
+                      border: "1px solid rgba(0,255,255,0.2)",
+                      color: "cyan",
+                      fontSize: "12px",
+                    }}
+                    itemStyle={{
+                      color: "cyan",
+                    }}
+                  />
+                  <Bar dataKey="count">
+                    {stats.severity_distribution.map((entry, index) => (
+                      <Cell key={index} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex items-center justify-center rounded-lg border border-cyan-400/15 bg-[#001a33] text-cyan-300/80 text-sm">
+                No severity data available.
+              </div>
+            )}
           </div>
         </div>
 
@@ -278,43 +298,49 @@ const IncidentDashboardUser = () => {
             Average Score Trend
           </h2>
           <div className="w-full h-64 md:h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={stats.score_trend}>
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="rgba(0,255,255,0.1)"
-                />
-                <XAxis
-                  dataKey="month"
-                  tickFormatter={(date) => new Date(date).toLocaleDateString()}
-                  stroke="#00ffff"
-                  fontSize={12}
-                  angle={-45}
-                  textAnchor="end"
-                  height={60}
-                />
-                <YAxis domain={[0, 100]} stroke="#00ffff" fontSize={12} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "#002345",
-                    border: "1px solid rgba(0,255,255,0.2)",
-                    color: "cyan",
-                    fontSize: "12px",
-                  }}
-                  itemStyle={{
-                    color: "cyan",
-                  }}
-                />
-                <Legend wrapperStyle={{ fontSize: "12px" }} />
-                <Line
-                  type="monotone"
-                  dataKey="avg_score"
-                  stroke="#00ffff"
-                  name="Average Score"
-                  strokeWidth={2}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            {hasData(stats.score_trend) ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={stats.score_trend}>
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke="rgba(0,255,255,0.1)"
+                  />
+                  <XAxis
+                    dataKey="month"
+                    tickFormatter={(date) => new Date(date).toLocaleDateString()}
+                    stroke="#00ffff"
+                    fontSize={12}
+                    angle={-45}
+                    textAnchor="end"
+                    height={60}
+                  />
+                  <YAxis domain={[0, 100]} stroke="#00ffff" fontSize={12} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "#002345",
+                      border: "1px solid rgba(0,255,255,0.2)",
+                      color: "cyan",
+                      fontSize: "12px",
+                    }}
+                    itemStyle={{
+                      color: "cyan",
+                    }}
+                  />
+                  <Legend wrapperStyle={{ fontSize: "12px" }} />
+                  <Line
+                    type="monotone"
+                    dataKey="avg_score"
+                    stroke="#00ffff"
+                    name="Average Score"
+                    strokeWidth={2}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex items-center justify-center rounded-lg border border-cyan-400/15 bg-[#001a33] text-cyan-300/80 text-sm">
+                No score trend data available.
+              </div>
+            )}
           </div>
         </div>
       </div>

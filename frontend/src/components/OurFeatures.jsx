@@ -1,140 +1,95 @@
 import { Link } from "react-router-dom";
 
+const featureCards = [
+  {
+    id: "ai",
+    title: "Saathi AI",
+    description:
+      "Your AI-powered assistant for medical, safety, and emotional support, including legal guidance.",
+    image:
+      "https://img.freepik.com/free-vector/chat-bot-concept-illustration_114360-5522.jpg",
+    route: "/chatbot",
+  },
+  {
+    id: "report",
+    title: "Report Incident",
+    description:
+      "Submit detailed civic incident reports quickly with a streamlined interface designed for urgent action.",
+    image:
+      "https://images.squarespace-cdn.com/content/v1/5bab316f7980b339c6dde5c2/877c3b92-24f0-4aa4-8804-2a389705d989/noun-warning-1109440-F5333F.png",
+    route: "/report-incident",
+  },
+  {
+    id: "heatmap",
+    title: "Heatmap Insights",
+    description:
+      "Visualize risk clusters using dynamic heatmaps so authorities and citizens can prioritize action zones.",
+    image:
+      "https://t4.ftcdn.net/jpg/04/23/40/87/360_F_423408792_3K3fZwYzn84LbJdIiKYW73FbMHnVFXd8.jpg",
+    route: "/heatmap",
+  },
+  {
+    id: "voice",
+    title: "Voice to Text",
+    description:
+      "Report incidents hands-free with voice transcription for more accessible and rapid emergency reporting.",
+    image:
+      "https://play-lh.googleusercontent.com/pzAgoUBDDetHSQpPp29Z0wkMQNyBvQIXXpNSnO5_yS8IJFs2dIVUaGEqOJDPYW1I9vE",
+    route: "/voice-report",
+  },
+];
+
 const OurFeatures = () => {
   return (
-    <div>
-      <div className="flex justify-center items-center flex-col bg-slate-900 min-h-screen">
-        {/* Title */}
-        <h1 className="text-cyan-400 font-extrabold text-3xl sm:text-4xl lg:text-6xl tracking-wide mt-7 drop-shadow-[0_0_15px_rgba(34,211,238,0.5)]">
-          Our Features
-        </h1>
+    <div className="w-full rounded-3xl px-2 py-4 sm:p-6">
+      <div className="text-center mb-10">
+        <p className="text-xs sm:text-sm uppercase tracking-[0.2em] text-cyan-200/80">
+          Explore BharatSecure
+        </p>
+        <h2 className="section-title mt-3 text-3xl sm:text-4xl lg:text-5xl font-extrabold">
+          Core Civic Protection Features
+        </h2>
+      </div>
 
-        {/* Grid Section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mt-12 p-6 sm:p-4 md:p-6 rounded-lg">
-          {/* Card 1 */}
-          <Link to={"/chatbot"}>
-            <div className="flex flex-col bg-slate-800 shadow-[inset_-8px_-8px_12px_rgba(0,0,0,0.3),inset_8px_8px_12px_rgba(255,255,255,0.1)] hover:shadow-[0_0_15px_rgba(34,211,238,0.3)] transition-all duration-300 rounded-xl overflow-hidden cursor-pointer">
-              <div className="m-4 overflow-hidden rounded-xl h-48 sm:h-60 flex justify-center items-center bg-slate-700">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 sm:gap-7">
+        {featureCards.map((feature, index) => (
+          <Link key={feature.id} to={feature.route} className="block">
+            <article
+              className="glass-panel rounded-2xl p-4 h-full transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_20px_50px_rgba(4,8,18,0.62)] reveal-up"
+              style={{ animationDelay: `${index * 80}ms` }}
+            >
+              <div className="relative h-44 sm:h-48 rounded-xl overflow-hidden mb-4 border border-cyan-200/10">
                 <img
-                  className="w-full h-full object-cover opacity-80"
-                  src="https://img.freepik.com/free-vector/chat-bot-concept-illustration_114360-5522.jpg"
-                  alt="Saathi AI"
+                  className="w-full h-full object-cover scale-105 hover:scale-110 transition-transform duration-500"
+                  src={feature.image}
+                  alt={feature.title}
                 />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#070a14] via-transparent to-transparent" />
               </div>
-              <div className="p-6 text-center">
-                <h4 className="mb-2 text-xl sm:text-2xl font-bold text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.3)]">
-                  Saathi AI
-                </h4>
-                <p className="text-base text-slate-300 mt-3 leading-relaxed">
-                  Your AI-powered assistant for medical, safety, and emotional
-                  support, along with legal guidance. Saathi AI ensures you get
-                  the right help when you need it the most.
-                </p>
-              </div>
-              <div className="flex justify-center p-6 pt-2 gap-4">
-                <button
-                  className="rounded-xl bg-cyan-500 py-2 px-6 text-white text-sm font-semibold shadow-[inset_-4px_-4px_8px_rgba(0,0,0,0.3),inset_4px_4px_8px_rgba(255,255,255,0.1)] hover:shadow-[0_0_10px_rgba(34,211,238,0.5)] transition-all duration-300"
-                  type="button"
-                >
-                  Try Now
-                </button>
-              </div>
-            </div>
-          </Link>
 
-          {/* Card 2 */}
-          <Link to={"/report-incident"}>
-            <div className="flex flex-col bg-slate-800 shadow-[inset_-8px_-8px_12px_rgba(0,0,0,0.3),inset_8px_8px_12px_rgba(255,255,255,0.1)] hover:shadow-[0_0_15px_rgba(34,211,238,0.3)] transition-all duration-300 rounded-xl overflow-hidden cursor-pointer">
-              <div className="m-4 overflow-hidden rounded-xl h-48 sm:h-60 flex justify-center items-center bg-slate-700">
-                <img
-                  className="w-full h-full object-cover opacity-80"
-                  src="https://images.squarespace-cdn.com/content/v1/5bab316f7980b339c6dde5c2/877c3b92-24f0-4aa4-8804-2a389705d989/noun-warning-1109440-F5333F.png"
-                  alt="Report"
-                />
-              </div>
-              <div className="p-6 text-center">
-                <h4 className="mb-2 text-xl sm:text-2xl font-bold text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.3)]">
-                  Report Incident
-                </h4>
-                <p className="text-base text-slate-300 mt-3 leading-relaxed">
-                  Simplify incident reporting with our convenient online form.
-                  Quickly and efficiently submit all necessary details with our
-                  streamlined process.
-                </p>
-              </div>
-              <div className="flex justify-center p-6 pt-2 gap-4">
-                <button
-                  className="rounded-xl bg-cyan-500 py-2 px-6 text-white text-sm font-semibold shadow-[inset_-4px_-4px_8px_rgba(0,0,0,0.3),inset_4px_4px_8px_rgba(255,255,255,0.1)] hover:shadow-[0_0_10px_rgba(34,211,238,0.5)] transition-all duration-300"
-                  type="button"
-                >
-                  Try Now
-                </button>
-              </div>
-            </div>
-          </Link>
+              <h3 className="text-xl font-bold text-slate-50">{feature.title}</h3>
+              <p className="text-sm text-slate-300 mt-3 leading-relaxed min-h-20">
+                {feature.description}
+              </p>
 
-          {/* Card 3 */}
-          <Link to={"/heatmap"}>
-            <div className="flex flex-col bg-slate-800 shadow-[inset_-8px_-8px_12px_rgba(0,0,0,0.3),inset_8px_8px_12px_rgba(255,255,255,0.1)] hover:shadow-[0_0_15px_rgba(34,211,238,0.3)] transition-all duration-300 rounded-xl overflow-hidden cursor-pointer">
-              <div className="m-4 overflow-hidden rounded-xl h-48 sm:h-60 flex justify-center items-center bg-slate-700">
-                <img
-                  className="w-full h-full object-cover opacity-80"
-                  src="https://t4.ftcdn.net/jpg/04/23/40/87/360_F_423408792_3K3fZwYzn84LbJdIiKYW73FbMHnVFXd8.jpg"
-                  alt="Heatmap"
-                />
-              </div>
-              <div className="p-6 text-center">
-                <h4 className="mb-2 text-xl sm:text-2xl font-bold text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.3)]">
-                  Heatmap
-                </h4>
-                <p className="text-base text-slate-300 mt-3 leading-relaxed">
-                  Pinpoint high-risk areas with our interactive incident
-                  heatmap. Visualize the frequency and severity of incidents to
-                  proactively address potential hazards.
-                </p>
-              </div>
-              <div className="flex justify-center p-6 pt-2 gap-4">
-                <button
-                  className="rounded-xl bg-cyan-500 py-2 px-6 text-white text-sm font-semibold shadow-[inset_-4px_-4px_8px_rgba(0,0,0,0.3),inset_4px_4px_8px_rgba(255,255,255,0.1)] hover:shadow-[0_0_10px_rgba(34,211,238,0.5)] transition-all duration-300"
-                  type="button"
-                >
+              <div className="mt-5">
+                <span className="inline-flex items-center gap-2 glass-button rounded-full text-cyan-100 text-xs sm:text-sm px-4 py-2">
                   Try Now
-                </button>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    className="w-4 h-4"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14m-7-7 7 7-7 7" />
+                  </svg>
+                </span>
               </div>
-            </div>
+            </article>
           </Link>
-
-          {/* Card 4 */}
-          <Link to={"/voice-report"}>
-            <div className="flex flex-col bg-slate-800 shadow-[inset_-8px_-8px_12px_rgba(0,0,0,0.3),inset_8px_8px_12px_rgba(255,255,255,0.1)] hover:shadow-[0_0_15px_rgba(34,211,238,0.3)] transition-all duration-300 rounded-xl overflow-hidden cursor-pointer">
-              <div className="m-4 overflow-hidden rounded-xl h-48 sm:h-60 flex justify-center items-center bg-slate-700">
-                <img
-                  className="w-full h-full object-cover opacity-80"
-                  src="https://play-lh.googleusercontent.com/pzAgoUBDDetHSQpPp29Z0wkMQNyBvQIXXpNSnO5_yS8IJFs2dIVUaGEqOJDPYW1I9vE"
-                  alt="Voice to Text"
-                />
-              </div>
-              <div className="p-6 text-center">
-                <h4 className="mb-2 text-xl sm:text-2xl font-bold text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.3)]">
-                  Voice to Text
-                </h4>
-                <p className="text-base text-slate-300 mt-3 leading-relaxed">
-                  A voice-to-text feature that allows users to verbally report
-                  incidents, making it accessible for individuals with
-                  disabilities who may have difficulty typing.
-                </p>
-              </div>
-              <div className="flex justify-center p-6 pt-2 gap-4">
-                <button
-                  className="rounded-xl bg-cyan-500 py-2 px-6 text-white text-sm font-semibold shadow-[inset_-4px_-4px_8px_rgba(0,0,0,0.3),inset_4px_4px_8px_rgba(255,255,255,0.1)] hover:shadow-[0_0_10px_rgba(34,211,238,0.5)] transition-all duration-300"
-                  type="button"
-                >
-                  Try Now
-                </button>
-              </div>
-            </div>
-          </Link>
-        </div>
+        ))}
       </div>
     </div>
   );

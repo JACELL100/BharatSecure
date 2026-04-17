@@ -147,10 +147,11 @@ const legendStyle = {
   position: "absolute",
   top: "60px", // Position it at the top
   right: "30px", // Position it on the right side
-  backgroundColor: "#fff",
+  backgroundColor: "rgba(10, 16, 27, 0.92)",
   padding: "10px",
   borderRadius: "5px",
-  boxShadow: "0px 4px 6px rgba(0, 0, 0, 0.1)",
+  border: "1px solid rgba(141, 180, 230, 0.24)",
+  boxShadow: "0px 10px 24px rgba(4, 8, 16, 0.52)",
   zIndex: 999,
   fontSize: "14px",
   width: "150px", // Control the width of the legend for better alignment

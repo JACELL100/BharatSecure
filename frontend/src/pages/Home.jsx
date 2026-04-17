@@ -5,15 +5,14 @@ import FloatingChatbot from "@/components/FloatingChatbot";
 import Chartglobal from "./Chart-global";
 import LanguageToggle from "@/components/ui/LanguageToggle";
 
-
 const Testimonials = lazy(() => import("@/components/Testimonials"));
 const FAQSection = lazy(() => import("@/components/FAQ"));
 const Footer = lazy(() => import("../components/Footer"));
 
 const LoadingSpinner = () => (
-  <div className="flex justify-center items-center min-h-[400px]">
+  <div className="flex justify-center items-center min-h-[280px]">
     <div className="relative w-16 h-16">
-      <div className="w-16 h-16 rounded-full border-4 border-cyan-600/20 border-t-cyan-400 animate-spin"></div>
+      <div className="w-16 h-16 rounded-full border-4 border-cyan-200/20 border-t-cyan-300 animate-spin"></div>
     </div>
   </div>
 );
@@ -56,9 +55,8 @@ const Home = () => {
     };
 
     fetchData();
-  }, []);
+  }, [API_URL]);
 
-  // Scroll to Features
   const scrollToFeatures = () => {
     if (featuresRef.current) {
       const offset = 70;
@@ -72,40 +70,49 @@ const Home = () => {
     }
   };
 
-  // Handle SOS confirmation
   const handleSOSClick = () => {
     setShowConfirm(true);
   };
 
   const confirmSOS = () => {
     setShowConfirm(false);
-    alert("SOS sent successfully! 🚨"); // Replace with API call
+    alert("SOS sent successfully! 🚨");
   };
 
   return (
-    <div className="bg-slate-900 min-h-screen">
+    <div className="min-h-screen">
       <LanguageToggle />
-      <div className="relative bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
-        {/* Content sections */}
-        <div className="relative z-10">
-          {/* Fullscreen Intro Section */}
-          <section className="relative h-screen flex flex-col justify-center items-center px-4">
-            <div className="text-center mb-10">
-              <p className="text-xl md:text-2xl text-slate-300 max-w-2xl mx-auto">
-                Empowering citizens to report civic problems, track progress,
-                and build cleaner, safer neighborhoods together.
-              </p>
+
+      <div className="relative z-10">
+        <section className="relative min-h-[88vh] px-4 sm:px-6 lg:px-8 flex items-center justify-center">
+          <div className="absolute inset-0 pointer-events-none">
+            <div className="absolute top-16 left-8 sm:left-16 w-40 sm:w-52 h-40 sm:h-52 rounded-full bg-cyan-400/10 blur-3xl animate-pulse"></div>
+            <div className="absolute right-6 sm:right-12 top-24 w-48 sm:w-64 h-48 sm:h-64 rounded-full bg-emerald-300/10 blur-3xl animate-pulse"></div>
+          </div>
+
+          <div className="relative max-w-5xl w-full glass-panel rounded-3xl p-8 sm:p-12 reveal-up">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-cyan-300/25 bg-cyan-300/10 text-cyan-100 text-xs sm:text-sm tracking-[0.18em] uppercase">
+              Civic Response Intelligence
             </div>
 
-            {/* SOS Button */}
-            <div className="relative mb-10">
+            <h1 className="mt-6 section-title text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-tight">
+              Report Faster. Respond Smarter. Keep Cities Safer.
+            </h1>
+
+            <p className="mt-5 max-w-3xl text-slate-300 text-base sm:text-lg leading-relaxed">
+              BharatSecure helps citizens report civic issues, emergency risks,
+              and infrastructure breakdowns with powerful tools such as AI
+              assistant support, heatmaps, and intelligent analytics.
+            </p>
+
+            <div className="mt-8 flex flex-col sm:flex-row gap-4 sm:items-center">
               <button
                 onClick={handleSOSClick}
-                className="bg-red-600 text-white text-xl md:text-2xl font-bold py-6 px-10 rounded-full shadow-lg flex items-center justify-center"
+                className="glass-button neon-outline text-white font-semibold text-sm sm:text-base px-7 py-4 rounded-full flex items-center justify-center gap-3"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  className="h-8 w-8 mr-2"
+                  className="h-5 w-5"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -117,95 +124,84 @@ const Home = () => {
                     d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
                   />
                 </svg>
-                EMERGENCY SOS
+                Emergency SOS
               </button>
-              <p className="text-slate-400 text-center mt-4 text-sm">
-                Press in case of emergency
-              </p>
+
+              <button
+                onClick={scrollToFeatures}
+                className="glass-button text-slate-100 font-semibold text-sm sm:text-base px-7 py-4 rounded-full"
+              >
+                Explore Platform Features
+              </button>
             </div>
 
-            {/* Downward Arrow */}
-            <button
-              onClick={scrollToFeatures}
-              className="bg-cyan-600/20 rounded-full p-3"
-              aria-label="Scroll down"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-8 w-8 text-cyan-400"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 14l-7 7m0 0l-7-7m7 7V3"
-                />
-              </svg>
-            </button>
-          </section>
-
-          {/* Features Section */}
-          <div ref={featuresRef}>
-            <section className="relative bg-slate-900 py-16 px-4">
-              <OurFeatures />
-            </section>
+            {loading && (
+              <p className="mt-6 text-sm text-cyan-100/80">
+                Syncing latest incident intelligence...
+              </p>
+            )}
           </div>
+        </section>
 
-          {/* Chart Section */}
-          <section className="relative py-16 bg-slate-900 px-4">
-            <Chartglobal />
+        <div ref={featuresRef} className="px-4 sm:px-6 lg:px-8 py-10">
+          <section className="glass-panel rounded-3xl p-2 sm:p-4">
+            <OurFeatures />
           </section>
-
-          {/* Testimonials */}
-          <Suspense fallback={<LoadingSpinner />}>
-            <section className="relative bg-slate-900 py-16 px-4">
-              <Testimonials />
-            </section>
-          </Suspense>
-
-          {/* FAQ */}
-          <Suspense fallback={<LoadingSpinner />}>
-            <section ref={faqRef} className="relative py-16 bg-slate-900 px-4">
-              <FAQSection />
-            </section>
-          </Suspense>
-
-          {/* Footer */}
-          <Suspense fallback={<LoadingSpinner />}>
-            <section className="relative bg-slate-800">
-              <Footer />
-            </section>
-          </Suspense>
         </div>
+
+        <section className="px-4 sm:px-6 lg:px-8 py-8">
+          <div className="glass-panel rounded-3xl p-4 sm:p-6">
+            <Chartglobal />
+          </div>
+        </section>
+
+        <Suspense fallback={<LoadingSpinner />}>
+          <section className="px-4 sm:px-6 lg:px-8 py-8">
+            <div className="glass-panel rounded-3xl p-4 sm:p-6">
+              <Testimonials />
+            </div>
+          </section>
+        </Suspense>
+
+        <Suspense fallback={<LoadingSpinner />}>
+          <section ref={faqRef} className="px-4 sm:px-6 lg:px-8 py-8">
+            <div className="glass-panel rounded-3xl p-4 sm:p-6">
+              <FAQSection />
+            </div>
+          </section>
+        </Suspense>
+
+        <Suspense fallback={<LoadingSpinner />}>
+          <section className="px-4 sm:px-6 lg:px-8 pt-6 pb-10">
+            <div className="glass-panel rounded-3xl">
+              <Footer />
+            </div>
+          </section>
+        </Suspense>
       </div>
 
-      {/* Floating Chatbot */}
       <div className="relative z-50">
         <div className="fixed bottom-6 right-6 rounded-full shadow-lg">
           <FloatingChatbot />
         </div>
       </div>
 
-      {/* Confirmation Popup */}
       {showConfirm && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
-          <div className="bg-white rounded-lg shadow-lg p-6 max-w-sm w-full text-center">
+        <div className="fixed inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm z-50 px-4">
+          <div className="glass-panel rounded-2xl shadow-2xl p-6 max-w-sm w-full text-center text-slate-100">
             <h2 className="text-lg font-semibold mb-4">
               Are you sure you want to send an SOS?
             </h2>
-            <div className="flex justify-center gap-4">
+            <div className="flex justify-center gap-3">
               <button
                 onClick={confirmSOS}
-                className="bg-red-600 text-white px-4 py-2 rounded"
+                className="glass-button text-red-300 border-red-400/40 px-5 py-2 rounded-full"
               >
                 Yes
               </button>
               <button
                 onClick={() => setShowConfirm(false)}
-                className="bg-gray-300 px-4 py-2 rounded"
+                className="glass-button text-slate-100 px-5 py-2 rounded-full"
               >
                 Cancel
               </button>
