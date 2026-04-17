@@ -25,16 +25,78 @@ const Login = () => {
     rememberMe: false,
   });
   const [errors, setErrors] = useState({});
+  const [isCheckingProfile, setIsCheckingProfile] = useState(false);
   const { isLoggedIn, signInWithPassword, signInWithGoogle } = useAuth();
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   useEffect(() => {
-    if (isLoggedIn) {
-      navigate("/my-reports");
+    if (!isLoggedIn) {
+      return;
     }
-  }, [isLoggedIn, navigate]);
+
+    let isMounted = true;
+
+    const resolveProfileCompletion = async () => {
+      const token = localStorage.getItem("accessToken");
+      if (!token) {
+        if (isMounted) {
+          setErrors((prev) => ({
+            ...prev,
+            general: "Unable to verify session. Please sign in again.",
+          }));
+        }
+        return;
+      }
+
+      if (isMounted) {
+        setIsCheckingProfile(true);
+      }
+
+      try {
+        const response = await axios.get(`${API_URL}/api/profile/me/`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const isProfileComplete = Boolean(response.data?.profile_complete);
+        localStorage.setItem("profileComplete", isProfileComplete ? "true" : "false");
+
+        if (!isMounted) {
+          return;
+        }
+
+        navigate(isProfileComplete ? "/my-reports" : "/complete-profile", {
+          replace: true,
+        });
+      } catch (error) {
+        localStorage.removeItem("profileComplete");
+
+        if (!isMounted) {
+          return;
+        }
+
+        setErrors((prev) => ({
+          ...prev,
+          general:
+            error.response?.data?.error ||
+            "Unable to verify your profile. Please try again.",
+        }));
+      } finally {
+        if (isMounted) {
+          setIsCheckingProfile(false);
+        }
+      }
+    };
+
+    resolveProfileCompletion();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [API_URL, isLoggedIn, navigate]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -80,8 +142,6 @@ const Login = () => {
         if (error) {
           throw error;
         }
-
-        navigate("/my-reports");
       } catch (error) {
         setErrors((prev) => ({
           ...prev,
@@ -307,6 +367,7 @@ const Login = () => {
                 variant="contained"
                 fullWidth
                 size={isMobile ? "medium" : "large"}
+                disabled={isCheckingProfile}
                 sx={{
                   backgroundColor: "rgba(20, 152, 197, 0.82)",
                   color: "#fff",
@@ -331,12 +392,13 @@ const Login = () => {
                 }}
                 onClick={handleLogin}
               >
-                Log In
+                {isCheckingProfile ? "Checking profile..." : "Log In"}
               </Button>
               <Button
                 variant="outlined"
                 fullWidth
                 size={isMobile ? "medium" : "large"}
+                disabled={isCheckingProfile}
                 sx={{
                   mt: 1.5,
                   borderColor: "rgba(141,180,230,0.45)",

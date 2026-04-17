@@ -20,6 +20,7 @@ import Home from "./pages/Home";
 import VoiceToText from "./components/VoiceToText";
 import SignUp from "./pages/SignUp";
 import Login from "./pages/Login";
+import CompleteProfile from "./pages/CompleteProfile";
 // import Blogs from "./pages/Blog"; not in use anymore
 import ScrollToTop from "./lib/ScrollToTop";
 import { AuthProvider } from "./context/AuthContext";
@@ -77,6 +78,7 @@ const AppRoutes = () => {
         <Route path="/voice-report" element={<VoiceToText />} />
         <Route path="/signUp" element={<SignUp />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/complete-profile" element={<CompleteProfile />} />
         <Route path="/InciLog" element={<RecentIncidents />} />
         <Route path="/view-details/:id" element={<ViewDetails />} />
         <Route path="/feedback" element={<FeedbackForm />} />

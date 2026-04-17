@@ -8,6 +8,7 @@ const clearAuthStorage = () => {
   localStorage.removeItem("refreshToken");
   localStorage.removeItem("lastLoginTime");
   localStorage.removeItem("userType");
+  localStorage.removeItem("profileComplete");
   sessionStorage.removeItem("accessToken");
   sessionStorage.removeItem("refreshToken");
 };

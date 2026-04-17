@@ -75,6 +75,16 @@ def _get_unique_numeric_value(field_name, base_seed, length, exclude_email=None)
     raise ValueError(f"Unable to generate unique value for {field_name}")
 
 
+def _normalize_numeric_input(value):
+    if value is None:
+        return ""
+
+    if not isinstance(value, str):
+        value = str(value)
+
+    return "".join(ch for ch in value if ch.isdigit())
+
+
 def _sync_supabase_user(claims):
     email = claims.get("email")
     if not email:
@@ -87,65 +97,82 @@ def _sync_supabase_user(claims):
     full_name = (metadata.get("full_name") or "").strip()
     full_name_parts = [part for part in full_name.split(" ") if part]
 
-    first_name = (
+    metadata_first_name = (
         metadata.get("first_name")
         or metadata.get("given_name")
-        or (full_name_parts[0] if full_name_parts else "Supabase")
+        or (full_name_parts[0] if full_name_parts else "")
     )
-    last_name = (
+    metadata_last_name = (
         metadata.get("last_name")
         or metadata.get("family_name")
-        or (" ".join(full_name_parts[1:]) if len(full_name_parts) > 1 else "User")
+        or (" ".join(full_name_parts[1:]) if len(full_name_parts) > 1 else "")
     )
+
+    first_name = metadata_first_name or "Supabase"
+    last_name = metadata_last_name or "User"
 
     source_seed = str(claims.get("sub") or email)
 
-    phone_number = metadata.get("phone_number") or metadata.get("phone")
-    if isinstance(phone_number, str):
-        phone_number = "".join(ch for ch in phone_number if ch.isdigit())
-    if not isinstance(phone_number, str) or len(phone_number) != 10:
+    metadata_phone_number = _normalize_numeric_input(
+        metadata.get("phone_number") or metadata.get("phone")
+    )
+    phone_number_is_valid = len(metadata_phone_number) == 10 and not User.objects.filter(
+        phone_number=metadata_phone_number
+    ).exclude(email=email).exists()
+    if phone_number_is_valid:
+        phone_number = metadata_phone_number
+    else:
         phone_number = _get_unique_numeric_value("phone_number", f"phone:{source_seed}", 10, exclude_email=email)
-    elif User.objects.filter(phone_number=phone_number).exclude(email=email).exists():
-        phone_number = _get_unique_numeric_value("phone_number", f"phone:{source_seed}", 10, exclude_email=email)
 
-    aadhar_number = metadata.get("aadhar_number")
-    if isinstance(aadhar_number, str):
-        aadhar_number = "".join(ch for ch in aadhar_number if ch.isdigit())
-    if not isinstance(aadhar_number, str) or len(aadhar_number) != 12:
+    metadata_aadhar_number = _normalize_numeric_input(metadata.get("aadhar_number"))
+    aadhar_number_is_valid = len(metadata_aadhar_number) == 12 and not User.objects.filter(
+        aadhar_number=metadata_aadhar_number
+    ).exclude(email=email).exists()
+    if aadhar_number_is_valid:
+        aadhar_number = metadata_aadhar_number
+    else:
         aadhar_number = _get_unique_numeric_value("aadhar_number", f"aadhar:{source_seed}", 12, exclude_email=email)
-    elif User.objects.filter(aadhar_number=aadhar_number).exclude(email=email).exists():
-        aadhar_number = _get_unique_numeric_value("aadhar_number", f"aadhar:{source_seed}", 12, exclude_email=email)
 
-    emergency_contact1 = metadata.get("emergency_contact1") or "0000000000"
-    emergency_contact2 = metadata.get("emergency_contact2") or "0000000000"
+    metadata_emergency_contact1 = _normalize_numeric_input(metadata.get("emergency_contact1"))
+    metadata_emergency_contact2 = _normalize_numeric_input(metadata.get("emergency_contact2"))
 
-    if isinstance(emergency_contact1, str):
-        emergency_contact1 = "".join(ch for ch in emergency_contact1 if ch.isdigit())
-    if isinstance(emergency_contact2, str):
-        emergency_contact2 = "".join(ch for ch in emergency_contact2 if ch.isdigit())
+    emergency_contact1 = metadata_emergency_contact1 if len(metadata_emergency_contact1) == 10 else "0000000000"
+    emergency_contact2 = metadata_emergency_contact2 if len(metadata_emergency_contact2) == 10 else "0000000000"
 
-    if len(emergency_contact1) != 10:
-        emergency_contact1 = "0000000000"
-    if len(emergency_contact2) != 10:
-        emergency_contact2 = "0000000000"
-
-    address = metadata.get("address") or "Not provided"
+    metadata_address = (metadata.get("address") or "").strip()
+    address = metadata_address or "Not provided"
 
     user = User.objects.filter(email=email).first()
     if user:
         fields_to_update = []
 
-        if first_name and user.first_name != first_name[:50]:
+        if metadata_first_name and user.first_name != first_name[:50]:
             user.first_name = first_name[:50]
             fields_to_update.append("first_name")
 
-        if last_name and user.last_name != last_name[:50]:
+        if metadata_last_name and user.last_name != last_name[:50]:
             user.last_name = last_name[:50]
             fields_to_update.append("last_name")
 
-        if address and user.address != address:
+        if metadata_address and user.address != address:
             user.address = address
             fields_to_update.append("address")
+
+        if phone_number_is_valid and user.phone_number != phone_number:
+            user.phone_number = phone_number
+            fields_to_update.append("phone_number")
+
+        if aadhar_number_is_valid and user.aadhar_number != aadhar_number:
+            user.aadhar_number = aadhar_number
+            fields_to_update.append("aadhar_number")
+
+        if len(metadata_emergency_contact1) == 10 and user.emergency_contact1 != metadata_emergency_contact1:
+            user.emergency_contact1 = metadata_emergency_contact1
+            fields_to_update.append("emergency_contact1")
+
+        if len(metadata_emergency_contact2) == 10 and user.emergency_contact2 != metadata_emergency_contact2:
+            user.emergency_contact2 = metadata_emergency_contact2
+            fields_to_update.append("emergency_contact2")
 
         if fields_to_update:
             user.save(update_fields=fields_to_update)
@@ -295,6 +322,60 @@ def AccessToken(token_str):
     claims = _decode_supabase_token(token_str)
     user = _sync_supabase_user(claims)
     return {"user_id": user.id, "user_type": "user"}
+
+
+def _get_missing_profile_fields(user, claims=None):
+    claims = claims or {}
+    metadata = claims.get("user_metadata") or {}
+    if not isinstance(metadata, dict):
+        metadata = {}
+
+    source_seed = str(claims.get("sub") or user.email)
+    missing_fields = []
+
+    first_name = (user.first_name or "").strip()
+    if not first_name or first_name.lower() in {"supabase", "anonymous"}:
+        missing_fields.append("first_name")
+
+    last_name = (user.last_name or "").strip()
+    if not last_name or last_name.lower() in {"user", "anonymous"}:
+        missing_fields.append("last_name")
+
+    phone_number = _normalize_numeric_input(user.phone_number)
+    if len(phone_number) != 10 or phone_number == "0000000000":
+        missing_fields.append("phone_number")
+    else:
+        metadata_phone_number = _normalize_numeric_input(
+            metadata.get("phone_number") or metadata.get("phone")
+        )
+        auto_generated_phone = _get_unique_numeric_value(
+            "phone_number",
+            f"phone:{source_seed}",
+            10,
+            exclude_email=user.email,
+        )
+        if len(metadata_phone_number) != 10 and phone_number == auto_generated_phone:
+            missing_fields.append("phone_number")
+
+    aadhar_number = _normalize_numeric_input(user.aadhar_number)
+    if len(aadhar_number) != 12 or aadhar_number == "000000000000":
+        missing_fields.append("aadhar_number")
+    else:
+        metadata_aadhar_number = _normalize_numeric_input(metadata.get("aadhar_number"))
+        auto_generated_aadhar = _get_unique_numeric_value(
+            "aadhar_number",
+            f"aadhar:{source_seed}",
+            12,
+            exclude_email=user.email,
+        )
+        if len(metadata_aadhar_number) != 12 and aadhar_number == auto_generated_aadhar:
+            missing_fields.append("aadhar_number")
+
+    address = (user.address or "").strip()
+    if not address or address.lower() in {"not provided", "anonymous"}:
+        missing_fields.append("address")
+
+    return missing_fields
 
 # Admin email for notifications
 ADMIN_EMAIL = 'jacelljamble@gmail.com'
@@ -449,6 +530,185 @@ class LoginView(APIView):
             return Response({
                 "error": "Invalid credentials"
             }, status=status.HTTP_401_UNAUTHORIZED)
+
+
+class CurrentUserProfileView(APIView):
+    required_fields = ["first_name", "last_name", "phone_number", "address", "aadhar_number"]
+
+    def _authenticate_request(self, request):
+        auth_header = request.headers.get("Authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            return None, None, None, Response(
+                {"error": "Authorization header missing or malformed"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        token_str = auth_header.split(" ")[1]
+
+        try:
+            token = AccessToken(token_str)
+            if token.get("user_type") != "user":
+                raise PermissionError("User token required")
+            user = get_object_or_404(User, id=token["user_id"])
+        except Exception:
+            return None, None, None, Response(
+                {"error": "Invalid or expired token"},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        claims = {}
+        try:
+            claims = _decode_supabase_token(token_str)
+        except Exception:
+            claims = {}
+
+        return user, claims, token_str, None
+
+    def _serialize_profile(self, user, claims=None):
+        missing_fields = _get_missing_profile_fields(user, claims)
+        return {
+            "id": user.id,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "email": user.email,
+            "phone_number": user.phone_number,
+            "address": user.address,
+            "aadhar_number": user.aadhar_number,
+            "emergency_contact1": user.emergency_contact1,
+            "emergency_contact2": user.emergency_contact2,
+            "missing_fields": missing_fields,
+            "profile_complete": len(missing_fields) == 0,
+        }
+
+    def get(self, request):
+        user, claims, _, error_response = self._authenticate_request(request)
+        if error_response:
+            return error_response
+
+        return Response(self._serialize_profile(user, claims), status=status.HTTP_200_OK)
+
+    def patch(self, request):
+        user, claims, _, error_response = self._authenticate_request(request)
+        if error_response:
+            return error_response
+
+        data = request.data or {}
+
+        first_name = str(data.get("first_name") or data.get("firstName") or "").strip()
+        last_name = str(data.get("last_name") or data.get("lastName") or "").strip()
+        phone_number = _normalize_numeric_input(
+            data.get("phone_number") or data.get("phoneNumber") or ""
+        )
+        address = str(data.get("address") or "").strip()
+        aadhar_number = _normalize_numeric_input(
+            data.get("aadhar_number") or data.get("aadharNumber") or ""
+        )
+
+        required_payload = {
+            "first_name": first_name,
+            "last_name": last_name,
+            "phone_number": phone_number,
+            "address": address,
+            "aadhar_number": aadhar_number,
+        }
+        missing_fields = [
+            field_name for field_name in self.required_fields if not required_payload.get(field_name)
+        ]
+        if missing_fields:
+            return Response(
+                {
+                    "error": "Missing required profile fields",
+                    "missing_fields": missing_fields,
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if len(phone_number) != 10:
+            return Response(
+                {"phone_number": "Valid 10-digit phone number is required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if User.objects.filter(phone_number=phone_number).exclude(id=user.id).exists():
+            return Response(
+                {"phone_number": "Phone number already exists"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if len(aadhar_number) != 12:
+            return Response(
+                {"aadhar_number": "Valid 12-digit Aadhar number is required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if User.objects.filter(aadhar_number=aadhar_number).exclude(id=user.id).exists():
+            return Response(
+                {"aadhar_number": "Aadhar number already exists"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        emergency_contact1_raw = data.get("emergency_contact1") or data.get("emergencyContact1")
+        emergency_contact2_raw = data.get("emergency_contact2") or data.get("emergencyContact2")
+
+        emergency_contact1 = (
+            _normalize_numeric_input(emergency_contact1_raw)
+            if emergency_contact1_raw is not None
+            else user.emergency_contact1
+        )
+        emergency_contact2 = (
+            _normalize_numeric_input(emergency_contact2_raw)
+            if emergency_contact2_raw is not None
+            else user.emergency_contact2
+        )
+
+        if emergency_contact1 and len(emergency_contact1) != 10:
+            return Response(
+                {"emergency_contact1": "Emergency contact 1 must be a valid 10-digit number"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if emergency_contact2 and len(emergency_contact2) != 10:
+            return Response(
+                {"emergency_contact2": "Emergency contact 2 must be a valid 10-digit number"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        fields_to_update = []
+
+        if user.first_name != first_name[:50]:
+            user.first_name = first_name[:50]
+            fields_to_update.append("first_name")
+
+        if user.last_name != last_name[:50]:
+            user.last_name = last_name[:50]
+            fields_to_update.append("last_name")
+
+        if user.phone_number != phone_number:
+            user.phone_number = phone_number
+            fields_to_update.append("phone_number")
+
+        if user.address != address:
+            user.address = address
+            fields_to_update.append("address")
+
+        if user.aadhar_number != aadhar_number:
+            user.aadhar_number = aadhar_number
+            fields_to_update.append("aadhar_number")
+
+        if emergency_contact1 and user.emergency_contact1 != emergency_contact1:
+            user.emergency_contact1 = emergency_contact1
+            fields_to_update.append("emergency_contact1")
+
+        if emergency_contact2 and user.emergency_contact2 != emergency_contact2:
+            user.emergency_contact2 = emergency_contact2
+            fields_to_update.append("emergency_contact2")
+
+        if fields_to_update:
+            user.save(update_fields=fields_to_update)
+
+        response_payload = self._serialize_profile(user, claims)
+        response_payload["message"] = "Profile updated successfully"
+        return Response(response_payload, status=status.HTTP_200_OK)
+
+    def put(self, request):
+        return self.patch(request)
         
         
 
