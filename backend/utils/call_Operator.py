@@ -5,10 +5,12 @@ from langchain_core.runnables import RunnableLambda
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from typing import List, Dict
 import logging
+import os
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+GROQ_API_KEY = os.getenv('GROQ_API_KEY', '')
 
 class EmergencyHelplineBot:
     def __init__(self):
@@ -16,7 +18,7 @@ class EmergencyHelplineBot:
         # Initialize chat history and model
         self.chat_history: List = []
         try:
-            self.model = ChatGroq(model='llama-3.1-8b-instant', api_key='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')
+            self.model = ChatGroq(model='llama-3.1-8b-instant', api_key=GROQ_API_KEY)
         except Exception as e:
             logger.error(f"Failed to initialize model: {str(e)}")
             raise

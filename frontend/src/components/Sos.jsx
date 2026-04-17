@@ -181,19 +181,19 @@ const Sos = () => {
         </h1> */}
 
         {/* Features Grid Layout */}
-        <div className="relative grid grid-cols-3 w-[800px] h-[600px] place-items-center">
+        <div className="relative flex flex-col md:grid md:grid-cols-3 w-full md:w-[800px] h-auto md:h-[600px] gap-8 md:gap-0 place-items-center px-4 py-8">
           {/* Top Feature */}
-          <div className="col-start-2">
+          <div className="md:col-start-2">
             <FeatureCard feature={features[0]} />
           </div>
 
           {/* Middle Row Features */}
-          <div className="col-start-1 row-start-2">
+          <div className="md:col-start-1 md:row-start-2">
             <FeatureCard feature={features[1]} />
           </div>
 
           {/* Center SOS Button */}
-          <div className="col-start-2 row-start-2">
+          <div className="md:col-start-2 md:row-start-2 order-first md:order-none mb-8 md:mb-0">
             <button
               onClick={handleSOSClick}
               className="relative bg-red-500 text-white font-bold text-3xl py-6 px-16 rounded-full shadow-[inset_-4px_-4px_8px_rgba(0,0,0,0.3),inset_4px_4px_8px_rgba(255,255,255,0.1)] hover:shadow-[0_0_20px_rgba(239,68,68,0.5)] transition-all duration-300 hover:scale-105 z-10"
@@ -203,12 +203,12 @@ const Sos = () => {
             </button>
           </div>
 
-          <div className="col-start-3 row-start-2">
+          <div className="md:col-start-3 md:row-start-2">
             <FeatureCard feature={features[2]} />
           </div>
 
           {/* Bottom Feature */}
-          <div className="col-start-2 row-start-3">
+          <div className="md:col-start-2 md:row-start-3">
             <FeatureCard feature={features[3]} />
           </div>
         </div>

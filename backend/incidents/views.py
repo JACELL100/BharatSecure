@@ -1182,7 +1182,9 @@ def send_email_example(subject, message, email):
 
 # Function to get coordinates from Geoapify Geocoding API
 def get_coordinates(location):
-    api_key = "fabe86e749c44aa2a8ae60c68c2e3c6f"
+    api_key = os.getenv("GEOAPIFY_API_KEY", "")
+    if not api_key:
+        raise ValueError("Missing GEOAPIFY_API_KEY environment variable")
     url = f"https://api.geoapify.com/v1/geocode/search?text={location}&apiKey={api_key}"
     headers = requests.structures.CaseInsensitiveDict()
     headers["Accept"] = "application/json"
