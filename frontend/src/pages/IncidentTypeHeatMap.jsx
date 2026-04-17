@@ -225,7 +225,7 @@ const LegendComponent = ({ incidentsByType, activeTypes, onToggle, categoryFilte
   });
 
   return (
-    <div className="absolute top-20 right-4 z-[1000] bg-slate-900/95 backdrop-blur-sm border-2 border-white/20 rounded-xl shadow-2xl max-w-sm max-h-[80vh] overflow-hidden flex flex-col">
+    <div className="absolute top-[21rem] md:top-24 right-4 z-[1000] bg-slate-900/95 backdrop-blur-sm border-2 border-white/20 rounded-xl shadow-2xl w-[90vw] md:w-auto md:max-w-sm max-h-[40vh] md:max-h-[80vh] overflow-hidden flex flex-col">
       <div 
         className="flex items-center justify-between p-4 cursor-pointer hover:bg-white/5 transition-colors border-b border-white/10"
         onClick={() => setIsExpanded(!isExpanded)}
@@ -320,7 +320,7 @@ const StatsPanel = ({ incidentsByType, totalIncidents, categoryFilter }) => {
   const filteredTotal = filteredIncidents.reduce((sum, [_, incidents]) => sum + incidents.length, 0);
 
   return (
-    <div className="absolute top-20 left-4 z-[1000] bg-slate-900/95 backdrop-blur-sm border-2 border-white/20 rounded-xl shadow-2xl max-w-sm">
+    <div className="absolute top-[6rem] md:top-24 left-4 z-[1000] bg-slate-900/95 backdrop-blur-sm border-2 border-white/20 rounded-xl shadow-2xl w-[90vw] md:w-auto md:max-w-sm max-h-[35vh] md:max-h-none overflow-y-auto">
       <div 
         className="flex items-center justify-between p-4 cursor-pointer hover:bg-white/5 transition-colors"
         onClick={() => setIsExpanded(!isExpanded)}

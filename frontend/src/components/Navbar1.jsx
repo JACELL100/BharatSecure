@@ -12,16 +12,21 @@ import {
   Drawer,
   List,
   ListItem,
+  ListItemButton,
   ListItemText,
+  Collapse,
 } from "@mui/material";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import logo from "/image.png";
 import MenuIcon from "@mui/icons-material/Menu";
+import ExpandLess from "@mui/icons-material/ExpandLess";
+import ExpandMore from "@mui/icons-material/ExpandMore";
 
 const Navbar = () => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [mobileFeaturesOpen, setMobileFeaturesOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const { isLoggedIn } = useAuth();
@@ -60,16 +65,17 @@ const Navbar = () => {
         flexDirection: "column",
         justifyContent: "space-between",
       }}
-      onClick={() => toggleDrawer(false)}
     >
       <List>
         {["/", "/About", "/Blogs"].map((route, index) => {
           const label = route.slice(1) || "Home";
           return (
-            <ListItem
-              button
+            <ListItemButton
               key={index}
-              onClick={() => handleNavigation(route)}
+              onClick={() => {
+                handleNavigation(route);
+                toggleDrawer(false);
+              }}
               sx={{
                 marginBottom: 1,
                 borderRadius: 2,
@@ -86,12 +92,11 @@ const Navbar = () => {
                 primary={label}
                 sx={{ textAlign: "center", fontWeight: "bold" }}
               />
-            </ListItem>
+            </ListItemButton>
           );
         })}
-        <ListItem
-          button
-          onClick={handleMenuClick}
+        <ListItemButton
+          onClick={() => setMobileFeaturesOpen(!mobileFeaturesOpen)}
           sx={{
             marginBottom: 1,
             borderRadius: 2,
@@ -104,7 +109,33 @@ const Navbar = () => {
           }}
         >
           <ListItemText primary="Features" sx={{ textAlign: "center" }} />
-        </ListItem>
+          {mobileFeaturesOpen ? <ExpandLess /> : <ExpandMore />}
+        </ListItemButton>
+        <Collapse in={mobileFeaturesOpen} timeout="auto" unmountOnExit>
+          <List component="div" disablePadding>
+            {[
+              { route: "/report-incident", label: "Report Incident" },
+              { route: "/heatmap", label: "Heatmaps" },
+              { route: "/heatmap2", label: "Incident Type Heatmap" },
+              { route: "/voice-report", label: "Voice Report" },
+              { route: "/chatbot", label: "Saathi AI" },
+              { route: "/upload", label: "VR Viewer" },
+              { route: "/pothole", label: "Pothole Analyzer" },
+              { route: "/video", label: "Video Analysis" },
+            ].map((item) => (
+              <ListItemButton
+                key={item.route}
+                sx={{ pl: 4, mb: 0.5, borderRadius: 2, color: "#fff", "&:hover": { backgroundColor: "#22d3ee", color: "#0f192c" } }}
+                onClick={() => {
+                  handleNavigation(item.route);
+                  toggleDrawer(false);
+                }}
+              >
+                <ListItemText primary={item.label} sx={{ textAlign: "center", fontSize: '0.9rem' }} />
+              </ListItemButton>
+            ))}
+          </List>
+        </Collapse>
       </List>
       <Box sx={{ textAlign: "center", paddingTop: 2 }}>
         <Typography variant="caption" sx={{ color: "#22d3ee" }}>
@@ -228,6 +259,7 @@ const Navbar = () => {
                 },
               }}
               onMouseEnter={handleMenuClick}
+              onClick={handleMenuClick}
               onMouseLeave={(event) => {
                 const isOverMenu =
                   event.relatedTarget?.closest(".MuiMenu-root");
@@ -336,6 +368,7 @@ const Navbar = () => {
             onClick={() => {
               handleNavigation(item.route);
               handleMenuClose();
+              toggleDrawer(false);
             }}
           >
             {item.label}
