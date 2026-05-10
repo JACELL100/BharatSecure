@@ -127,9 +127,11 @@ if DATABASE_URL:
             'PASSWORD': unquote(parsed_db.password or ''),
             'HOST': parsed_db.hostname,
             'PORT': parsed_db.port or 5432,
-            'CONN_MAX_AGE': int(os.getenv('DB_CONN_MAX_AGE', '60')),
+            'CONN_MAX_AGE': 0,  # Close connections immediately to avoid pool exhaustion
+            'CONN_HEALTH_CHECKS': True,  # Enable connection health checks
             'OPTIONS': {
                 'sslmode': os.getenv('DB_SSLMODE', 'require'),
+                'connect_timeout': 10,
             },
         }
     }
