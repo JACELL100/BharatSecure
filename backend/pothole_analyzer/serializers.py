@@ -15,15 +15,15 @@ class PotholeAnalysisSerializer(serializers.ModelSerializer):
         ]
     
     def get_image_url(self, obj):
-        request = self.context.get('request')
-        if obj.image and request:
-            return request.build_absolute_uri(obj.image.url)
+        # obj.image is already a full URL from Supabase
+        if obj.image:
+            return obj.image if isinstance(obj.image, str) else obj.image.url
         return None
     
     def get_processed_image_url(self, obj):
-        request = self.context.get('request')
-        if obj.processed_image and request:
-            return request.build_absolute_uri(obj.processed_image.url)
+        # obj.processed_image is already a full URL from Supabase
+        if obj.processed_image:
+            return obj.processed_image if isinstance(obj.processed_image, str) else obj.processed_image.url
         return None
 
 
@@ -36,9 +36,9 @@ class VideoFrameDetectionSerializer(serializers.ModelSerializer):
         read_only_fields = ['video_analysis', 'created_at']
     
     def get_frame_image_url(self, obj):
-        request = self.context.get('request')
-        if obj.frame_image and request:
-            return request.build_absolute_uri(obj.frame_image.url)
+        # obj.frame_image is already a full URL from Supabase
+        if obj.frame_image:
+            return obj.frame_image if isinstance(obj.frame_image, str) else obj.frame_image.url
         return None
 
 
@@ -61,21 +61,21 @@ class PotholeVideoAnalysisSerializer(serializers.ModelSerializer):
         ]
     
     def get_video_url(self, obj):
-        request = self.context.get('request')
-        if obj.video and request:
-            return request.build_absolute_uri(obj.video.url)
+        # obj.video is already a full URL from Supabase
+        if obj.video:
+            return obj.video if isinstance(obj.video, str) else obj.video.url
         return None
     
     def get_processed_video_url(self, obj):
-        request = self.context.get('request')
-        if obj.processed_video and request:
-            return request.build_absolute_uri(obj.processed_video.url)
+        # obj.processed_video is already a full URL from Supabase
+        if obj.processed_video:
+            return obj.processed_video if isinstance(obj.processed_video, str) else obj.processed_video.url
         return None
     
     def get_thumbnail_url(self, obj):
-        request = self.context.get('request')
-        if obj.thumbnail and request:
-            return request.build_absolute_uri(obj.thumbnail.url)
+        # obj.thumbnail is already a full URL from Supabase
+        if obj.thumbnail:
+            return obj.thumbnail if isinstance(obj.thumbnail, str) else obj.thumbnail.url
         return None
     
     def get_detection_count(self, obj):
@@ -96,13 +96,13 @@ class PotholeVideoAnalysisListSerializer(serializers.ModelSerializer):
         ]
     
     def get_video_url(self, obj):
-        request = self.context.get('request')
-        if obj.video and request:
-            return request.build_absolute_uri(obj.video.url)
+        # obj.video is already a full URL from Supabase
+        if obj.video:
+            return obj.video if isinstance(obj.video, str) else obj.video.url
         return None
     
     def get_thumbnail_url(self, obj):
-        request = self.context.get('request')
-        if obj.thumbnail and request:
-            return request.build_absolute_uri(obj.thumbnail.url)
+        # obj.thumbnail is already a full URL from Supabase
+        if obj.thumbnail:
+            return obj.thumbnail if isinstance(obj.thumbnail, str) else obj.thumbnail.url
         return None

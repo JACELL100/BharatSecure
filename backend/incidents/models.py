@@ -154,7 +154,7 @@ class Incidents(models.Model):
     location = models.JSONField()
     description = models.TextField()
     severity = models.CharField(choices=SEVERITY_CHOICES, default='low', max_length=20)
-    file = models.FileField(upload_to='incident_files/', blank=True, null=True)
+    file = models.URLField(max_length=500, blank=True, null=True, help_text="Supabase storage URL")
     reported_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='incidents', null=True, blank=True)
     reported_at = models.DateTimeField(default=timezone.now)
     municipal_corporation = models.ForeignKey('MunicipalCorporation', on_delete=models.DO_NOTHING, null=True, blank=True)
@@ -211,7 +211,7 @@ class Incidents(models.Model):
     
 class Comment(models.Model):
     comment = models.TextField()
-    file = models.FileField(upload_to='comments_files/', blank=True, null=True)
+    file = models.URLField(max_length=500, blank=True, null=True, help_text="Supabase storage URL")
     commented_by = models.ForeignKey(
         User,
         on_delete=models.CASCADE,

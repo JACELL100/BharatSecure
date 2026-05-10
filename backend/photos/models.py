@@ -3,7 +3,7 @@ from django.utils import timezone
 
 class Photo(models.Model):
     title = models.CharField(max_length=200, blank=True)
-    image = models.ImageField(upload_to='photos/')
+    image = models.URLField(max_length=500, help_text="Supabase storage URL")
     uploaded_at = models.DateTimeField(default=timezone.now)
     
     def __str__(self):

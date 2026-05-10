@@ -11,8 +11,10 @@ from .serializers import (
     VideoFrameDetectionSerializer
 )
 from .cv_service import PotholeAnalyzer, PotholeVideoAnalyzer
+from utils.supabase_storage import get_storage
 import os
 import shutil
+import tempfile
 from threading import Thread
 
 class PotholeAnalysisViewSet(viewsets.ModelViewSet):
@@ -21,32 +23,81 @@ class PotholeAnalysisViewSet(viewsets.ModelViewSet):
     
     def create(self, request, *args, **kwargs):
         """Upload image and automatically analyze"""
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        instance = serializer.save()
-        
-        # Analyze the image
-        try:
-            self._analyze_pothole(instance)
-            instance.refresh_from_db()
-        except Exception as e:
+        image_file = request.FILES.get('image')
+        if not image_file:
             return Response(
-                {'error': f'Analysis failed: {str(e)}'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {'error': 'No image file provided'},
+                status=status.HTTP_400_BAD_REQUEST
             )
         
-        return Response(
-            self.get_serializer(instance).data,
-            status=status.HTTP_201_CREATED
-        )
+        try:
+            # Upload to Supabase
+            storage = get_storage()
+            image_url = storage.upload_file(
+                file=image_file,
+                bucket_name='potholes',
+                folder='original'
+            )
+            
+            # Create instance with URL
+            data = request.data.copy()
+            data['image'] = image_url
+            
+            serializer = self.get_serializer(data=data)
+            serializer.is_valid(raise_exception=True)
+            instance = serializer.save()
+            
+            # Download image temporarily for analysis
+            temp_dir = tempfile.mkdtemp()
+            temp_image_path = os.path.join(temp_dir, 'temp_image.jpg')
+            
+            # Download from URL for processing
+            import requests
+            response = requests.get(image_url)
+            with open(temp_image_path, 'wb') as f:
+                f.write(response.content)
+            
+            # Analyze the image
+            try:
+                self._analyze_pothole(instance, temp_image_path)
+                instance.refresh_from_db()
+            except Exception as e:
+                return Response(
+                    {'error': f'Analysis failed: {str(e)}'},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+            finally:
+                # Cleanup temp files
+                shutil.rmtree(temp_dir, ignore_errors=True)
+            
+            return Response(
+                self.get_serializer(instance).data,
+                status=status.HTTP_201_CREATED
+            )
+            
+        except Exception as e:
+            return Response(
+                {'error': f'Upload failed: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
     
     @action(detail=True, methods=['post'])
     def reanalyze(self, request, pk=None):
         """Reanalyze an existing image"""
         instance = self.get_object()
         
+        # Download image temporarily for analysis
+        temp_dir = tempfile.mkdtemp()
+        temp_image_path = os.path.join(temp_dir, 'temp_image.jpg')
+        
         try:
-            self._analyze_pothole(instance)
+            # Download from URL
+            import requests
+            response = requests.get(instance.image)
+            with open(temp_image_path, 'wb') as f:
+                f.write(response.content)
+            
+            self._analyze_pothole(instance, temp_image_path)
             instance.refresh_from_db()
             return Response(self.get_serializer(instance).data)
         except Exception as e:
@@ -54,13 +105,12 @@ class PotholeAnalysisViewSet(viewsets.ModelViewSet):
                 {'error': f'Analysis failed: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+        finally:
+            shutil.rmtree(temp_dir, ignore_errors=True)
     
-    def _analyze_pothole(self, instance):
+    def _analyze_pothole(self, instance, image_path):
         """Internal method to perform analysis"""
         analyzer = PotholeAnalyzer()
-        
-        # Get full path to image
-        image_path = instance.image.path
         
         # Analyze
         results = analyzer.analyze_image(image_path)
@@ -81,13 +131,16 @@ class PotholeAnalysisViewSet(viewsets.ModelViewSet):
         instance.estimated_repair_cost = results['estimated_repair_cost']
         instance.analyzed_at = timezone.now()
         
-        # Save processed image
+        # Upload processed image to Supabase
         if results.get('processed_image'):
-            instance.processed_image.save(
-                f'processed_{instance.id}.jpg',
-                results['processed_image'],
-                save=False
+            storage = get_storage()
+            processed_url = storage.upload_file(
+                file=results['processed_image'],
+                bucket_name='processed-images',
+                folder='potholes',
+                filename=f'processed_{instance.id}.jpg'
             )
+            instance.processed_image = processed_url
         
         instance.save()
 
@@ -102,19 +155,45 @@ class PotholeVideoAnalysisViewSet(viewsets.ModelViewSet):
     
     def create(self, request, *args, **kwargs):
         """Upload video and start analysis"""
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        instance = serializer.save(status='pending')
+        video_file = request.FILES.get('video')
+        if not video_file:
+            return Response(
+                {'error': 'No video file provided'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         
-        # Start analysis in background thread
-        thread = Thread(target=self._analyze_video_async, args=(instance.id,))
-        thread.daemon = True
-        thread.start()
-        
-        return Response(
-            self.get_serializer(instance).data,
-            status=status.HTTP_201_CREATED
-        )
+        try:
+            # Upload to Supabase
+            storage = get_storage()
+            video_url = storage.upload_file(
+                file=video_file,
+                bucket_name='pothole-videos',
+                folder='original'
+            )
+            
+            # Create instance with URL
+            data = request.data.copy()
+            data['video'] = video_url
+            
+            serializer = self.get_serializer(data=data)
+            serializer.is_valid(raise_exception=True)
+            instance = serializer.save(status='pending')
+            
+            # Start analysis in background thread
+            thread = Thread(target=self._analyze_video_async, args=(instance.id,))
+            thread.daemon = True
+            thread.start()
+            
+            return Response(
+                self.get_serializer(instance).data,
+                status=status.HTTP_201_CREATED
+            )
+            
+        except Exception as e:
+            return Response(
+                {'error': f'Upload failed: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
     
     @action(detail=True, methods=['post'])
     def reanalyze(self, request, pk=None):
@@ -194,11 +273,22 @@ class PotholeVideoAnalysisViewSet(viewsets.ModelViewSet):
     
     def _analyze_video_async(self, video_id):
         """Background task to analyze video"""
+        temp_dir = None
         try:
             instance = PotholeVideoAnalysis.objects.get(id=video_id)
             instance.status = 'processing'
             instance.processing_progress = 0
             instance.save()
+            
+            # Download video temporarily for analysis
+            temp_dir = tempfile.mkdtemp()
+            temp_video_path = os.path.join(temp_dir, 'temp_video.mp4')
+            
+            import requests
+            response = requests.get(instance.video, stream=True)
+            with open(temp_video_path, 'wb') as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    f.write(chunk)
             
             # Progress callback
             def update_progress(progress):
@@ -207,9 +297,9 @@ class PotholeVideoAnalysisViewSet(viewsets.ModelViewSet):
             
             # Analyze video
             analyzer = PotholeVideoAnalyzer(frame_skip=5)
-            video_path = instance.video.path
+            results = analyzer.analyze_video(temp_video_path, progress_callback=update_progress)
             
-            results = analyzer.analyze_video(video_path, progress_callback=update_progress)
+            storage = get_storage()
             
             # Update video metadata
             metadata = results['video_metadata']
@@ -228,30 +318,42 @@ class PotholeVideoAnalysisViewSet(viewsets.ModelViewSet):
             instance.total_estimated_cost = stats['total_estimated_cost']
             instance.timestamp_data = stats['timestamp_data']
             
-            # Save processed video
+            # Upload processed video
             if os.path.exists(results['processed_video_path']):
-                with open(results['processed_video_path'], 'rb') as f:
-                    instance.processed_video.save(
-                        f'processed_video_{instance.id}.mp4',
-                        ContentFile(f.read()),
-                        save=False
-                    )
+                processed_video_url = storage.upload_file(
+                    file=results['processed_video_path'],
+                    bucket_name='processed-videos',
+                    folder='potholes',
+                    filename=f'processed_video_{instance.id}.mp4'
+                )
+                instance.processed_video = processed_video_url
             
-            # Save thumbnail
+            # Upload thumbnail
             if results['thumbnail_path'] and os.path.exists(results['thumbnail_path']):
-                with open(results['thumbnail_path'], 'rb') as f:
-                    instance.thumbnail.save(
-                        f'thumbnail_{instance.id}.jpg',
-                        ContentFile(f.read()),
-                        save=False
-                    )
+                thumbnail_url = storage.upload_file(
+                    file=results['thumbnail_path'],
+                    bucket_name='video-thumbnails',
+                    folder='potholes',
+                    filename=f'thumbnail_{instance.id}.jpg'
+                )
+                instance.thumbnail = thumbnail_url
             
             # Save frame detections
             for detection in results['detections']:
-                frame_detection = VideoFrameDetection(
+                frame_image_url = None
+                if detection['frame_path'] and os.path.exists(detection['frame_path']):
+                    frame_image_url = storage.upload_file(
+                        file=detection['frame_path'],
+                        bucket_name='video-frames',
+                        folder='potholes',
+                        filename=f'frame_{instance.id}_{detection["frame_number"]}.jpg'
+                    )
+                
+                VideoFrameDetection.objects.create(
                     video_analysis=instance,
                     frame_number=detection['frame_number'],
                     timestamp_seconds=detection['timestamp_seconds'],
+                    frame_image=frame_image_url,
                     width_cm=detection['width_cm'],
                     height_cm=detection['height_cm'],
                     area_cm2=detection['area_cm2'],
@@ -265,17 +367,6 @@ class PotholeVideoAnalysisViewSet(viewsets.ModelViewSet):
                     bbox_width=detection['bounding_box'][2],
                     bbox_height=detection['bounding_box'][3]
                 )
-                
-                # Save frame image if exists
-                if detection['frame_path'] and os.path.exists(detection['frame_path']):
-                    with open(detection['frame_path'], 'rb') as f:
-                        frame_detection.frame_image.save(
-                            f'frame_{instance.id}_{detection["frame_number"]}.jpg',
-                            ContentFile(f.read()),
-                            save=False
-                        )
-                
-                frame_detection.save()
             
             # Clean up temp directory
             if 'temp_dir' in results and os.path.exists(results['temp_dir']):
@@ -296,3 +387,7 @@ class PotholeVideoAnalysisViewSet(viewsets.ModelViewSet):
                 instance.save()
             except:
                 pass
+        finally:
+            # Cleanup temp files
+            if temp_dir and os.path.exists(temp_dir):
+                shutil.rmtree(temp_dir, ignore_errors=True)

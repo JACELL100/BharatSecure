@@ -9,5 +9,9 @@ class PhotoSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         data = super().to_representation(instance)
         if instance.image:
-            data['image'] = f"http://127.0.0.1:8000{instance.image.url}"
+            # Handle both Supabase URLs (strings) and Django FileField objects
+            if isinstance(instance.image, str):
+                data['image'] = instance.image
+            else:
+                data['image'] = f"http://127.0.0.1:8000{instance.image.url}"
         return data

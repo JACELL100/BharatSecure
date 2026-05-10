@@ -42,27 +42,33 @@ class PotholeAnalysisAdmin(admin.ModelAdmin):
     
     def image_thumbnail(self, obj):
         if obj.image:
+            # Handle both Supabase URLs (strings) and Django FileField objects
+            image_url = obj.image if isinstance(obj.image, str) else obj.image.url
             return format_html(
                 '<img src="{}" width="50" height="50" style="object-fit: cover; border-radius: 4px;" />',
-                obj.image.url
+                image_url
             )
         return '-'
     image_thumbnail.short_description = 'Image'
     
     def image_preview(self, obj):
         if obj.image:
+            # Handle both Supabase URLs (strings) and Django FileField objects
+            image_url = obj.image if isinstance(obj.image, str) else obj.image.url
             return format_html(
                 '<img src="{}" width="300" style="border-radius: 8px;" />',
-                obj.image.url
+                image_url
             )
         return '-'
     image_preview.short_description = 'Original Image'
     
     def processed_image_preview(self, obj):
         if obj.processed_image:
+            # Handle both Supabase URLs (strings) and Django FileField objects
+            image_url = obj.processed_image if isinstance(obj.processed_image, str) else obj.processed_image.url
             return format_html(
                 '<img src="{}" width="300" style="border-radius: 8px;" />',
-                obj.processed_image.url
+                image_url
             )
         return '-'
     processed_image_preview.short_description = 'Processed Image'
@@ -130,18 +136,22 @@ class PotholeVideoAnalysisAdmin(admin.ModelAdmin):
     
     def video_thumbnail(self, obj):
         if obj.thumbnail:
+            # Handle both Supabase URLs (strings) and Django FileField objects
+            thumbnail_url = obj.thumbnail if isinstance(obj.thumbnail, str) else obj.thumbnail.url
             return format_html(
                 '<img src="{}" width="80" height="50" style="object-fit: cover; border-radius: 4px;" />',
-                obj.thumbnail.url
+                thumbnail_url
             )
         return '-'
     video_thumbnail.short_description = 'Thumbnail'
     
     def video_thumbnail_large(self, obj):
         if obj.thumbnail:
+            # Handle both Supabase URLs (strings) and Django FileField objects
+            thumbnail_url = obj.thumbnail if isinstance(obj.thumbnail, str) else obj.thumbnail.url
             return format_html(
                 '<img src="{}" width="400" style="border-radius: 8px;" />',
-                obj.thumbnail.url
+                thumbnail_url
             )
         return '-'
     video_thumbnail_large.short_description = 'Video Thumbnail'
@@ -188,9 +198,11 @@ class VideoFrameDetectionAdmin(admin.ModelAdmin):
     
     def frame_image_preview(self, obj):
         if obj.frame_image:
+            # Handle both Supabase URLs (strings) and Django FileField objects
+            image_url = obj.frame_image if isinstance(obj.frame_image, str) else obj.frame_image.url
             return format_html(
                 '<img src="{}" width="400" style="border-radius: 8px;" />',
-                obj.frame_image.url
+                image_url
             )
         return '-'
     frame_image_preview.short_description = 'Frame Image'

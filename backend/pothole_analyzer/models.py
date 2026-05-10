@@ -9,11 +9,8 @@ class PotholeAnalysis(models.Model):
         ('critical', 'Critical'),
     ]
     
-    image = models.ImageField(
-        upload_to='potholes/',
-        validators=[FileExtensionValidator(['jpg', 'jpeg', 'png'])]
-    )
-    processed_image = models.ImageField(upload_to='processed/', null=True, blank=True)
+    image = models.URLField(max_length=500, help_text="Supabase storage URL for original image")
+    processed_image = models.URLField(max_length=500, null=True, blank=True, help_text="Supabase storage URL for processed image")
     
     # Analysis Results
     width_cm = models.FloatField(null=True, blank=True)
@@ -62,12 +59,9 @@ class PotholeVideoAnalysis(models.Model):
     ]
     
     # Video file
-    video = models.FileField(
-        upload_to='pothole_videos/',
-        validators=[FileExtensionValidator(['mp4', 'avi', 'mov', 'mkv', 'webm'])]
-    )
-    processed_video = models.FileField(upload_to='processed_videos/', null=True, blank=True)
-    thumbnail = models.ImageField(upload_to='video_thumbnails/', null=True, blank=True)
+    video = models.URLField(max_length=500, help_text="Supabase storage URL for original video")
+    processed_video = models.URLField(max_length=500, null=True, blank=True, help_text="Supabase storage URL for processed video")
+    thumbnail = models.URLField(max_length=500, null=True, blank=True, help_text="Supabase storage URL for thumbnail")
     
     # Processing status
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
@@ -120,7 +114,7 @@ class VideoFrameDetection(models.Model):
     
     frame_number = models.IntegerField()
     timestamp_seconds = models.FloatField()
-    frame_image = models.ImageField(upload_to='video_frames/', null=True, blank=True)
+    frame_image = models.URLField(max_length=500, null=True, blank=True, help_text="Supabase storage URL for frame image")
     
     # Detection results
     width_cm = models.FloatField(null=True, blank=True)
