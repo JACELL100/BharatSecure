@@ -32,7 +32,7 @@ from tenacity import wait_exponential
 from django.core.cache import cache
 import re
 from django.db.models import (
-    Avg, Count, Q, FloatField, F, 
+    Avg, Count, Q, FloatField, F, Func, Value,
     ExpressionWrapper, Case, When, 
     OuterRef, Subquery, IntegerField
 )
@@ -1080,10 +1080,10 @@ Reporter Email: {incident.reported_by.email}
 Reported at: {incident.reported_at}
 
 Assigned Stations:
-- Police Station: {incident.police_station.name if incident.police_station else 'N/A'}
-- Fire Station: {incident.fire_station.name if incident.fire_station else 'N/A'}
-- Hospital: {incident.hospital_station.name if incident.hospital_station else 'N/A'}
-- Municipal Corporation: {incident.municipal_corporation.name if incident.municipal_corporation else 'N/A'}
+- Police Station: {str(incident.police_station) if incident.police_station else 'N/A'}
+- Fire Station: {str(incident.fire_station) if incident.fire_station else 'N/A'}
+- Hospital: {str(incident.hospital_station) if incident.hospital_station else 'N/A'}
+- Municipal Corporation: {str(incident.municipal_corporation) if incident.municipal_corporation else 'N/A'}
 
 Please review this incident in the admin panel.
             """
@@ -1395,10 +1395,10 @@ Reported at: {incident.reported_at}
 Report Type: Voice Report
 
 Assigned Stations:
-- Police Station: {incident.police_station.name if incident.police_station else 'N/A'}
-- Fire Station: {incident.fire_station.name if incident.fire_station else 'N/A'}
-- Hospital: {incident.hospital_station.name if incident.hospital_station else 'N/A'}
-- Municipal Corporation: {incident.municipal_corporation.name if incident.municipal_corporation else 'N/A'}
+- Police Station: {str(incident.police_station) if incident.police_station else 'N/A'}
+- Fire Station: {str(incident.fire_station) if incident.fire_station else 'N/A'}
+- Hospital: {str(incident.hospital_station) if incident.hospital_station else 'N/A'}
+- Municipal Corporation: {str(incident.municipal_corporation) if incident.municipal_corporation else 'N/A'}
 
 Please review this voice report incident in the admin panel.
             """
@@ -1432,8 +1432,11 @@ def update_incident(request, id):
         return Response({"message": f"Error Occurred: {e}"}, status=400)      
 
 def send_sms(message, number):
-    account_sid = 'ACa342288beff5795775a39a8ba798b51b'
-    auth_token = 'f35864d84f9fd0b14453405c8168d76d'
+    account_sid = os.getenv('TWILIO_ACCOUNT_SID', '')
+    auth_token = os.getenv('TWILIO_AUTH_TOKEN', '')
+    if not account_sid or not auth_token:
+        logger.warning('Twilio credentials not configured')
+        return Response({'error': 'SMS service not configured'}, status=500)
     client = Client(account_sid, auth_token)
     sms = client.messages.create(
     messaging_service_sid='MGa0dd71e727f8ff58f14fc197430c0988',
@@ -1544,14 +1547,15 @@ def all_user_incidents(request):
     
 @api_view(['GET'])
 def all_ongoing_incidents(request):
-    incidents = Incidents.objects.filter(status="Submitted")
-    return Response(incidents, status=201)
+    incidents = Incidents.objects.filter(status="submitted")
+    serializer = IncidentSerializer(incidents, many=True)
+    return Response(serializer.data, status=200)
 
 @api_view(['GET'])
 def all_incidents(request):
     incidents = Incidents.objects.all()
     serializer = IncidentSerializer(incidents, many=True)
-    return Response(serializer.data, status=201)
+    return Response(serializer.data, status=200)
 
 @api_view(['GET', 'POST'])
 def all_station_incidents(request):
@@ -1844,6 +1848,14 @@ Make the response practical and India-specific."""
 
 from django.core.serializers.json import DjangoJSONEncoder
 from django.utils.timezone import now, make_aware
+
+
+class ExtractEpoch(Func):
+    """Extract epoch seconds from a PostgreSQL interval/duration."""
+    template = "EXTRACT(EPOCH FROM %(expressions)s)"
+    output_field = FloatField()
+
+
 @api_view(['GET'])
 def advanced_incident_analysis(request):
     try:
@@ -1870,21 +1882,17 @@ def advanced_incident_analysis(request):
                 .annotate(
                     avg_score=Cast(Avg('score'), FloatField()),
                     total_incidents=Count('id'),
-                    avg_resolution_time=Cast(
-                        Avg(
-                            Case(
-                                When(
-                                    resolved_at__isnull=False,
-                                    then=ExpressionWrapper(
-                                        F('resolved_at') - F('reported_at'),
-                                        output_field=DurationField()
-                                    )
-                                ),
-                                default=None,
-                                output_field=DurationField(),
-                            )
-                        ),
-                        FloatField()
+                    avg_resolution_time=Avg(
+                        Case(
+                            When(
+                                resolved_at__isnull=False,
+                                then=ExtractEpoch(
+                                    F('resolved_at') - F('reported_at')
+                                )
+                            ),
+                            default=None,
+                            output_field=FloatField(),
+                        )
                     )
                 )
                 .order_by('incidentType', 'severity')
@@ -1902,9 +1910,10 @@ def advanced_incident_analysis(request):
                     resolved_count=Count('id', filter=Q(status='resolved'))
                 )
                 .annotate(
-                    resolution_rate=Cast(
-                        F('resolved_count') * 100.0 / Cast(F('total_incidents'), FloatField()),
-                        FloatField()
+                    resolution_rate=Case(
+                        When(total_incidents__gt=0, then=F('resolved_count') * 100.0 / Cast(F('total_incidents'), FloatField())),
+                        default=Value(0.0),
+                        output_field=FloatField()
                     )
                 )
                 .order_by('month')
@@ -1932,9 +1941,10 @@ def advanced_incident_analysis(request):
                     resolved_count=Count('id', filter=Q(status='resolved'))
                 )
                 .annotate(
-                    resolution_rate=Cast(
-                        F('resolved_count') * 100.0 / Cast(F('incident_density'), FloatField()),
-                        FloatField()
+                    resolution_rate=Case(
+                        When(incident_density__gt=0, then=F('resolved_count') * 100.0 / Cast(F('incident_density'), FloatField())),
+                        default=Value(0.0),
+                        output_field=FloatField()
                     )
                 )
                 .order_by('-incident_density')[:10]
@@ -1952,9 +1962,10 @@ def advanced_incident_analysis(request):
                     resolved_count=Count('id', filter=Q(status='resolved'))
                 )
                 .annotate(
-                    resolution_rate=Cast(
-                        F('resolved_count') * 100.0 / Cast(F('total_count'), FloatField()),
-                        FloatField()
+                    resolution_rate=Case(
+                        When(total_count__gt=0, then=F('resolved_count') * 100.0 / Cast(F('total_count'), FloatField())),
+                        default=Value(0.0),
+                        output_field=FloatField()
                     )
                 )
                 .order_by('-total_count')
@@ -1980,9 +1991,10 @@ def advanced_incident_analysis(request):
                     resolved_count=Count('id', filter=Q(status='resolved'))
                 )
                 .annotate(
-                    resolution_rate=Cast(
-                        F('resolved_count') * 100.0 / Cast(F('total_incidents'), FloatField()),
-                        FloatField()
+                    resolution_rate=Case(
+                        When(total_incidents__gt=0, then=F('resolved_count') * 100.0 / Cast(F('total_incidents'), FloatField())),
+                        default=Value(0.0),
+                        output_field=FloatField()
                     )
                 )
                 .order_by('weekday')
@@ -2026,7 +2038,7 @@ def advanced_incident_analysis(request):
         analytics['overall_statistics'] = {
             'total_incidents': total_incidents,
             'resolution_rate': float(
-                queryset.filter(status='Resolved').count() * 100.0 / total_incidents
+                queryset.filter(status='resolved').count() * 100.0 / total_incidents
                 if total_incidents > 0 else 0
             ),
             'avg_response_score': float(
@@ -2079,7 +2091,7 @@ class UserDetailView(View):
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from django.db.models import Count, Avg
-from django.db.models.functions import TruncMonth, ExtractMonth, ExtractYear
+from django.db.models.functions import TruncMonth, TruncDate, ExtractMonth, ExtractYear
 from django.utils import timezone
 from datetime import timedelta
 import datetime
@@ -2228,8 +2240,8 @@ def get_incident_analytics(request):
     # Get daily incidents for the last 30 days
     daily_incidents = base_queryset.filter(
         reported_at__range=[start_date, end_date]
-    ).extra(
-        select={'date': 'DATE(reported_at)'}
+    ).annotate(
+        date=TruncDate('reported_at')
     ).values('date').annotate(
         count=Count('id')
     ).order_by('date')
@@ -2293,7 +2305,7 @@ def incident_forecast(request):
         
         # Calculate basic statistics
         total_incidents = incidents.count()
-        resolved_count = incidents.filter(status='Resolved').count()
+        resolved_count = incidents.filter(status='resolved').count()
         unresolved_count = total_incidents - resolved_count
         
         # Trend data - incidents per day for last 30 days
@@ -2397,7 +2409,31 @@ def incident_forecast(request):
         }
         
         # IMPROVED PROMPT - More conversational, structured output
-        groq_model = _get_chat_model()
+        try:
+            groq_model = _get_chat_model()
+        except RuntimeError:
+            # GROQ_API_KEY not configured — return data without AI summary
+            forecast_data = {
+                'total_incidents': total_incidents,
+                'summary': 'AI-powered analysis is temporarily unavailable (GROQ_API_KEY not configured). Please review the statistical data below.',
+                'predictions': {
+                    'next_week': int(data_summary['average_daily_incidents'] * 7),
+                    'trend': data_summary['recent_trend'],
+                    'confidence': 'low'
+                },
+                'trend_data': trend_data,
+                'severity_distribution': severity_distribution,
+                'type_distribution': type_distribution,
+                'high_risk_areas': high_risk_areas,
+                'peak_hour': f"{peak_hour}:00" if peak_hour != 'N/A' else 'N/A',
+                'time_analysis': {
+                    'peak_hours': f"{peak_hour}:00 - {(peak_hour + 1) % 24}:00" if peak_hour != 'N/A' else 'N/A',
+                    'peak_days': peak_day
+                },
+                'recommendations': ['Configure GROQ_API_KEY environment variable to enable AI-powered analysis.'],
+                'analysis_timestamp': timezone.now().isoformat()
+            }
+            return Response(forecast_data, status=200)
         
         prompt = f"""You are an expert public safety analyst. Analyze this incident data and provide insights in a clear, professional tone.
 

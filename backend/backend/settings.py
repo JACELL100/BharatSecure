@@ -101,9 +101,9 @@ else:
 
 
 WEBPUSH_SETTINGS = {
-    "VAPID_PUBLIC_KEY": "BE38RCKNK0Ig5qBWT0SpZ4ya9OV05THWXOnGhselt3IWPWgN__M3lNHULW1PjXV2SuZz96dWuNNFFaB1jiGsPyc",
-    "VAPID_PRIVATE_KEY": "bFhHq38UhmlZPJOVvFUycd1lsx3NNs8Ri_riFj_AhQk",
-    "VAPID_ADMIN_EMAIL": "admin@example.com"
+    "VAPID_PUBLIC_KEY": os.getenv("VAPID_PUBLIC_KEY", ""),
+    "VAPID_PRIVATE_KEY": os.getenv("VAPID_PRIVATE_KEY", ""),
+    "VAPID_ADMIN_EMAIL": os.getenv("VAPID_ADMIN_EMAIL", "admin@example.com")
 }
 
 ROOT_URLCONF = 'backend.urls'
