@@ -25,7 +25,6 @@ import logging
 logger = logging.getLogger(__name__)
 from rest_framework import generics, status
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_groq import ChatGroq
 from rest_framework import viewsets, status
 from langchain_core.output_parsers import StrOutputParser
 from rest_framework.parsers import JSONParser
@@ -416,21 +415,37 @@ from datetime import timedelta
 # Read Groq key from environment instead of hardcoding secrets.
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 
-# Model for severity classification - lower temperature for consistent results
-severity_model = ChatGroq(
-                model="llama-3.1-8b-instant",
-                api_key=GROQ_API_KEY,
-                max_retries=3,
-                temperature=0.1  # Low temperature for consistent classification
-            )
+# Lazy-load Groq client to avoid import-time failures during Django checks/migrations.
+_GROQ_MODEL_CACHE = {}
 
-# Model for general chat - higher temperature for more natural responses
-model = ChatGroq(
-                model="llama-3.1-8b-instant",
-                api_key=GROQ_API_KEY,
-                max_retries=3,
-                temperature=0.7
-            )
+
+def _get_groq_model(temperature, max_retries=3):
+    if not GROQ_API_KEY:
+        raise RuntimeError("GROQ_API_KEY is not configured")
+
+    cache_key = (temperature, max_retries)
+    model = _GROQ_MODEL_CACHE.get(cache_key)
+    if model is None:
+        from langchain_groq import ChatGroq
+
+        model = ChatGroq(
+            model="llama-3.1-8b-instant",
+            api_key=GROQ_API_KEY,
+            max_retries=max_retries,
+            temperature=temperature,
+        )
+        _GROQ_MODEL_CACHE[cache_key] = model
+
+    return model
+
+
+def _get_severity_model():
+    return _get_groq_model(temperature=0.1)
+
+
+def _get_chat_model():
+    return _get_groq_model(temperature=0.7)
+
 
 @api_view(['GET'])
 def latest_incidents(request):
@@ -715,7 +730,7 @@ class CurrentUserProfileView(APIView):
 class form_report(APIView):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.llm = severity_model  # Use dedicated severity model with low temperature
+        self.llm = _get_severity_model()  # Use dedicated severity model with low temperature
         self.prompt = ChatPromptTemplate.from_messages([
             ("system", """You are an expert emergency incident classifier for a civic reporting system in India. Your task is to analyze incident reports and assign the correct severity level.
 
@@ -1028,7 +1043,7 @@ Return ONLY one word: "high", "medium", or "low"
             ("system", "Based on the description of the two incidents, return only 'True' if they are similar, otherwise 'False'."),
             ("human", "{newdata} \n {previousdata}")
         ])
-        chain = prompt | model | StrOutputParser()
+        chain = prompt | _get_chat_model() | StrOutputParser()
         return chain.invoke({"newdata": new_description, "previousdata": previous_description}).strip() == "True"
 
     def notify_existing_incident(self, incident):
@@ -1154,7 +1169,7 @@ Please review this incident in the admin panel.
 class voicereport(APIView):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.llm = model  # Ensure `model` is defined
+        self.llm = _get_chat_model()
         self.prompt = ChatPromptTemplate.from_messages([
             ('system', """
                 Analyze the provided incident report and return a structured JSON response that strictly follows the given format.
@@ -1681,7 +1696,7 @@ class ChatbotView_Therapist(APIView):
     parser_classes=[JSONParser]
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.llm = model
+        self.llm = _get_chat_model()
         self.prompt = ChatPromptTemplate.from_messages([
             ("system", """
              You are an AI assistant specializing in both therapy and legal guidance in India.
@@ -2254,7 +2269,6 @@ from django.db.models.functions import TruncDate, ExtractHour, ExtractWeekDay
 from datetime import datetime, timedelta, date
 from django.utils import timezone
 import json
-from langchain_groq import ChatGroq as GroqLLM
 
 # Configure Groq API
 groq_api_key = GROQ_API_KEY
@@ -2383,11 +2397,7 @@ def incident_forecast(request):
         }
         
         # IMPROVED PROMPT - More conversational, structured output
-        groq_model = GroqLLM(
-            model="llama-3.1-8b-instant",
-            api_key=groq_api_key,
-            temperature=0.7
-        )
+        groq_model = _get_chat_model()
         
         prompt = f"""You are an expert public safety analyst. Analyze this incident data and provide insights in a clear, professional tone.
 
