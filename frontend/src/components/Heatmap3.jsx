@@ -86,14 +86,13 @@ const Legend = () => {
 // Heatmap component
 const HeatMap = () => {
   const [heatmapData, setHeatmapData] = useState([]);
+  const API_URL = (import.meta.env.VITE_API_URL || "https://bharatsecure-backend.onrender.com").replace(/\/$/, "");
 
   useEffect(() => {
     // Fetch incidents from the Django backend
     const fetchIncidents = async () => {
       try {
-        const response = await fetch(
-          "http://127.0.0.1:8000/api/all_incidents/"
-        );
+        const response = await fetch(`${API_URL}/api/all_incidents/`);
         const incidents = await response.json();
         console.log("Fetched incidents:", incidents);
 

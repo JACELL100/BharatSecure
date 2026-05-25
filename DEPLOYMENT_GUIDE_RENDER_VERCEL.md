@@ -78,10 +78,10 @@ PYTHON_VERSION = 3.11.0
 ### Step 5: Deploy
 1. Click "Create Web Service"
 2. Wait 5-10 minutes for build
-3. Copy your backend URL: `https://your-app.onrender.com`
+3. Copy your backend URL: `https://bharatsecure-backend.onrender.com`
 
 ### Step 6: Test Backend
-Visit: `https://your-app.onrender.com/admin/`
+Visit: `https://bharatsecure-backend.onrender.com/admin/`
 You should see Django admin login page ✅
 
 ---
@@ -108,10 +108,10 @@ You should see Django admin login page ✅
 
 ### Step 4: Add Environment Variables
 
-**IMPORTANT:** Replace `your-backend.onrender.com` with YOUR actual Render URL!
+**IMPORTANT:** Use your Render URL: `bharatsecure-backend.onrender.com`
 
 ```
-VITE_API_URL = https://your-backend.onrender.com
+VITE_API_URL = https://bharatsecure-backend.onrender.com
 VITE_SUPABASE_URL = <from CREDENTIALS_LOCAL_ONLY.txt>
 VITE_SUPABASE_ANON_KEY = <from CREDENTIALS_LOCAL_ONLY.txt>
 ```
@@ -119,7 +119,7 @@ VITE_SUPABASE_ANON_KEY = <from CREDENTIALS_LOCAL_ONLY.txt>
 ### Step 5: Deploy
 1. Click "Deploy"
 2. Wait 2-3 minutes
-3. Copy your frontend URL: `https://your-app.vercel.app`
+3. Copy your frontend URL: `https://bharat-secure-phi.vercel.app`
 
 ---
 
@@ -133,7 +133,7 @@ VITE_SUPABASE_ANON_KEY = <from CREDENTIALS_LOCAL_ONLY.txt>
 
 ```python
 CORS_ALLOWED_ORIGINS = [
-    "https://your-actual-app.vercel.app",  # Replace with YOUR Vercel URL
+    "https://bharat-secure-phi.vercel.app",  # BharatSecure Vercel URL
     "http://localhost:5173",
     "http://localhost:3000",
 ]
@@ -186,9 +186,9 @@ Render will automatically redeploy (2-3 minutes)
 ## 🎉 Success!
 
 Your app is now live:
-- **Frontend:** `https://your-app.vercel.app`
-- **Backend:** `https://your-backend.onrender.com`
-- **Admin:** `https://your-backend.onrender.com/admin/`
+- **Frontend:** `https://bharat-secure-phi.vercel.app`
+- **Backend:** `https://bharatsecure-backend.onrender.com`
+- **Admin:** `https://bharatsecure-backend.onrender.com/admin/`
 
 ---
 

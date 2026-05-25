@@ -12,11 +12,12 @@ import FloatingChatbot from "@/components/FloatingChatbot";
 
 function IncidentList() {
   const [incidents, setIncidents] = useState([]);
+  const API_URL = (import.meta.env.VITE_API_URL || "https://bharatsecure-backend.onrender.com").replace(/\/$/, "");
 
   useEffect(() => {
     async function fetchIncidents() {
       try {
-        const response = await axios.get("http://127.0.0.1:8000/api/latest-incidents/");
+        const response = await axios.get(`${API_URL}/api/latest-incidents/`);
         console.log("Fetched Incidents:", response.data); // Debugging
         setIncidents(response.data);
       } catch (error) {

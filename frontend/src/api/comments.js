@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_URL = 'http://127.0.0.1:8000/api';
+const API_ROOT_URL = (import.meta.env.VITE_API_URL || "https://bharatsecure-backend.onrender.com").replace(/\/$/, "");
+const API_URL = `${API_ROOT_URL}/api`;
 
 export const getComments = async (incidentId) => {
     const response = await axios.get(`${API_URL}/incidents/${incidentId}/comments/`);

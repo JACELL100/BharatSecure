@@ -7,7 +7,8 @@ import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import 'leaflet.heat';
 
-const API_BASE_URL = 'http://127.0.0.1:8000/pothole/api';
+const API_ROOT_URL = (import.meta.env.VITE_API_URL || "https://bharatsecure-backend.onrender.com").replace(/\/$/, "");
+const API_BASE_URL = `${API_ROOT_URL}/pothole/api`;
 
 const PotholeAnalyzer = () => {
   const [selectedFile, setSelectedFile] = useState(null);

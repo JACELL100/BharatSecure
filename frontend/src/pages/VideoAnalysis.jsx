@@ -13,7 +13,7 @@ const VideoAnalysis = () => {
   const videoRef = useRef(null);
   const fileInputRef = useRef(null);
 
-  const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
+  const API_URL = (import.meta.env.VITE_API_URL || "https://bharatsecure-backend.onrender.com").replace(/\/$/, "");
   const token = localStorage.getItem("accessToken") || "";
 
   useEffect(() => {

@@ -91,7 +91,7 @@ CORS_ALLOW_ALL_ORIGINS = DEBUG  # Only allow all origins in development
 if not DEBUG:
     # Add your Vercel domain here after deployment
     CORS_ALLOWED_ORIGINS = [
-        "https://your-app.vercel.app",  # Replace with your actual Vercel domain
+        "https://bharat-secure-phi.vercel.app",  # BharatSecure Vercel domain
         "http://localhost:5173",  # For local development
         "http://localhost:3000",
     ]

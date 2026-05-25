@@ -7,6 +7,7 @@ const Sos = () => {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
   const [particles, setParticles] = useState([]);
+  const API_URL = (import.meta.env.VITE_API_URL || "https://bharatsecure-backend.onrender.com").replace(/\/$/, "");
   // const [ripples, setRipples] = useState([]);
 
   const features = [
@@ -122,7 +123,7 @@ const Sos = () => {
       const watchId = navigator.geolocation.watchPosition(
         (position) => {
           const { latitude, longitude } = position.coords;
-          fetch("http://127.0.0.1:8000/api/update-location/", {
+          fetch(`${API_URL}/api/update-location/`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ latitude, longitude }),

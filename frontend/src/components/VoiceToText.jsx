@@ -14,6 +14,7 @@ const VoiceInput = () => {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [loadingSpinner, setLoadingSpinner] = useState(false);
+  const API_URL = (import.meta.env.VITE_API_URL || "https://bharatsecure-backend.onrender.com").replace(/\/$/, "");
 
   // Store recognition instance in useRef
   const recognitionRef = useRef(null);
@@ -209,20 +210,20 @@ const VoiceInput = () => {
       };
 
       console.log("Sending data to backend:", extractedData);
-      console.log("Making request to: http://127.0.0.1:8000/api/voice-report/");
+      console.log(`Making request to: ${API_URL}/api/voice-report/`);
 
       // First, test if backend is reachable
       console.log("Testing backend connectivity...");
       try {
-        await axios.get("http://127.0.0.1:8000/api/latest-incidents/");
+        await axios.get(`${API_URL}/api/latest-incidents/`);
         console.log("Backend is reachable");
       } catch (connectError) {
         console.error("Backend connectivity test failed:", connectError);
-        throw new Error("Cannot connect to backend. Please ensure the Django server is running on http://127.0.0.1:8000");
+        throw new Error(`Cannot connect to backend. Please ensure the server is reachable at ${API_URL}`);
       }
 
       const response = await axios.post(
-        "http://127.0.0.1:8000/api/voice-report/",
+        `${API_URL}/api/voice-report/`,
         extractedData
       );
 
@@ -265,7 +266,7 @@ const VoiceInput = () => {
       } else if (err.request) {
         // Request was made but no response received
         console.error("No response received:", err.request);
-        errorMessage = "No response from server. Please check if the backend is running on http://127.0.0.1:8000";
+        errorMessage = `No response from server. Please check if the backend is running at ${API_URL}`;
       } else {
         // Something else happened
         errorMessage = `Request Error: ${err.message}`;
