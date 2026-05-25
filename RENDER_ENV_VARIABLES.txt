@@ -6,12 +6,12 @@
 # ============================================
 
 # Database Configuration
-DATABASE_URL=your_supabase_database_url_here
+DATABASE_URL=your_database_url_here
 DB_SSLMODE=require
 
 # Django Configuration
 DJANGO_DEBUG=False
-DJANGO_SECRET_KEY=GENERATE_NEW_KEY_USING_COMMAND_BELOW
+DJANGO_SECRET_KEY=your_django_secret_key_here
 DJANGO_ALLOWED_HOSTS=.onrender.com,.vercel.app
 
 # Supabase Configuration
@@ -25,7 +25,7 @@ GROQ_API_KEY=your_groq_api_key_here
 GEOAPIFY_API_KEY=your_geoapify_api_key_here
 
 # Python Version
-PYTHON_VERSION=3.11.0
+PYTHON_VERSION=3.11.9
 
 # ============================================
 # HOW TO GENERATE DJANGO_SECRET_KEY
@@ -35,12 +35,17 @@ PYTHON_VERSION=3.11.0
 #
 # Or visit: https://djecrety.ir/
 #
-# Then replace GENERATE_NEW_KEY_USING_COMMAND_BELOW with the generated key
+# Then replace your_django_secret_key_here with the generated key
 
 # ============================================
 # IMPORTANT NOTES
 # ============================================
-# 1. After deployment, update DJANGO_ALLOWED_HOSTS to include your Vercel domain
-# 2. Generate a NEW SECRET_KEY - don't use the default one!
-# 3. Keep DJANGO_DEBUG=False in production
-# 4. If your repo is public, rotate all API keys
+# 1. Get actual values from CREDENTIALS_LOCAL_ONLY.txt (local file only)
+# 2. After deployment, update DJANGO_ALLOWED_HOSTS to include your Vercel domain
+# 3. Generate a NEW SECRET_KEY - don't use the default one!
+# 4. Keep DJANGO_DEBUG=False in production
+# 5. Since keys were exposed in git history, consider rotating all API keys:
+#    - Generate new Supabase keys
+#    - Generate new GROQ API key
+#    - Generate new Geoapify API key
+#    - Update in Render and Vercel
