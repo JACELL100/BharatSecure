@@ -1,10 +1,12 @@
 import { useNavigate } from "react-router-dom";
 import { FaRobot } from "react-icons/fa";
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 const FloatingChatbot = () => {
   const navigate = useNavigate();
   const [animate, setAnimate] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
     setAnimate(true);
@@ -12,7 +14,17 @@ const FloatingChatbot = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  return (
+  useEffect(() => {
+    setIsMounted(true);
+    return () => setIsMounted(false);
+  }, []);
+
+  if (!isMounted) {
+    return null;
+  }
+
+  return createPortal(
+    // Render into document.body so fixed positioning stays tied to the viewport.
     <div
       className="fixed bottom-6 right-6 sm:bottom-8 sm:right-8 group cursor-pointer z-50"
       onClick={() => navigate("/chatbot")}
@@ -31,7 +43,8 @@ const FloatingChatbot = () => {
           <FaRobot className="text-2xl sm:text-3xl" />
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
