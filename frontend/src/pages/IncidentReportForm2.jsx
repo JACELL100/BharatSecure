@@ -7,6 +7,7 @@ import FloatingChatbot from "@/components/FloatingChatbot";
 import { motion } from "framer-motion";
 import { Camera, MapPin, AlertTriangle, FileText, Upload } from "lucide-react";
 import MapModal from "@/components/about-components/MapModal";
+import API_BASE_URL from "@/lib/apiBase";
 
 const SimpleModal = ({ open, handleClose, message }) => {
   return (
@@ -139,18 +140,18 @@ const IncidentReportForm = () => {
     }
 
     try {
-      const API_HOST = import.meta.env.VITE_API_HOST;
-    const API_URL = (import.meta.env.VITE_API_URL || "https://bharatsecure-backend.onrender.com").replace(/\/+$/, "");
-      const token = localStorage.getItem("accessToken"); // Retrieve token from storage or context
+      const API_URL = API_BASE_URL;
+      const token = localStorage.getItem("accessToken");
+      const headers = {};
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
 
       const response = await axios.post(
         `${API_URL}/api/report-incident/`,
         formDataToSend,
         {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`, // Include token in the Authorization header
-          },
+          headers,
         }
       );
 

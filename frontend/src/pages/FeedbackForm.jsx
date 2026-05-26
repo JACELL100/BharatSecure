@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import Footer from "@/components/Footer";
 import FloatingChatbot from "@/components/FloatingChatbot";
+import API_BASE_URL from "@/lib/apiBase";
 
 const FeedbackForm = () => {
   const [name, setName] = useState("");
@@ -9,8 +10,7 @@ const FeedbackForm = () => {
   const [message, setMessage] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
-  const API_HOST = import.meta.env.VITE_API_HOST;
-  const API_URL = (import.meta.env.VITE_API_URL || "https://bharatsecure-backend.onrender.com").replace(/\/+$/, "");
+  const API_URL = API_BASE_URL;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -21,7 +21,7 @@ const FeedbackForm = () => {
     }
 
     try {
-      const response = await fetch(`${API_URL}/submit-feedback/`, {
+      const response = await fetch(`${API_URL}/api/submit-feedback/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

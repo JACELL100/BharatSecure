@@ -748,9 +748,15 @@ class CurrentUserProfileView(APIView):
 class form_report(APIView):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.llm = _get_severity_model()  # Use dedicated severity model with low temperature
-        self.prompt = ChatPromptTemplate.from_messages([
-            ("system", """You are an expert emergency incident classifier for a civic reporting system in India. Your task is to analyze incident reports and assign the correct severity level.
+        self.llm = None
+        self.prompt = None
+        self.chain = None
+        self.chain_error = None
+
+        try:
+            self.llm = _get_severity_model()  # Use dedicated severity model with low temperature
+            self.prompt = ChatPromptTemplate.from_messages([
+                ("system", """You are an expert emergency incident classifier for a civic reporting system in India. Your task is to analyze incident reports and assign the correct severity level.
 
 SEVERITY CLASSIFICATION RULES:
 
@@ -884,9 +890,73 @@ These incident types should NEVER be classified as LOW:
 
 Return ONLY one word: "high", "medium", or "low"
 """),
-            ("human", "Incident Type: {incident_type}\n\nDescription: {user_input}")
-        ])
-        self.chain = self.prompt | self.llm | StrOutputParser()
+                ("human", "Incident Type: {incident_type}\n\nDescription: {user_input}")
+            ])
+            self.chain = self.prompt | self.llm | StrOutputParser()
+        except Exception as exc:
+            self.chain_error = str(exc)
+
+    def _fallback_severity(self, incident_type, description):
+        high_severity_types = {'Medical Emergency', 'Natural Disaster', 'Human Trafficking'}
+        medium_min_types = {
+            'Fire', 'Accident', 'Domestic Violence', 'Child Abuse',
+            'Sexual Harassment', 'Stalking', 'Missing Persons', 'Injury'
+        }
+
+        description_text = (description or "").lower()
+
+        high_keywords = [
+            "death", "dying", "deceased", "fatal", "killed", "critical", "unconscious",
+            "not breathing", "heart attack", "stroke", "choking", "drowning", "electrocution",
+            "heavy bleeding", "deep wound", "fracture", "burn", "head trauma", "severe",
+            "trapped", "suicide", "self-harm", "assault", "attack", "stabbing", "shooting",
+            "rape", "molestation", "kidnapping", "abduction", "trafficking", "fire", "explosion",
+            "gas leak", "collapsed", "bomb", "weapon", "gun", "knife"
+        ]
+
+        medium_keywords = [
+            "dangerous", "risky", "hazard", "could lead", "might cause", "concerned",
+            "worried", "scared", "open manhole", "exposed wire", "pothole", "signal",
+            "overflow", "sewage", "dumping", "aggressive", "missing", "suspicious"
+        ]
+
+        if incident_type in high_severity_types:
+            return "high"
+
+        if any(keyword in description_text for keyword in high_keywords):
+            return "high"
+
+        if incident_type in medium_min_types:
+            return "medium"
+
+        if any(keyword in description_text for keyword in medium_keywords):
+            return "medium"
+
+        return "medium"
+
+    def _resolve_severity(self, incident_type, description):
+        severity_response = ""
+        detected_severity = None
+
+        if self.chain:
+            try:
+                severity_response = self.chain.invoke({
+                    "incident_type": incident_type,
+                    "user_input": description,
+                }).strip().lower()
+                valid_severities = ['high', 'medium', 'low']
+                detected_severity = next(
+                    (sev for sev in valid_severities if sev in severity_response),
+                    None,
+                )
+            except Exception:
+                detected_severity = None
+
+        if detected_severity:
+            return detected_severity, severity_response
+
+        fallback = self._fallback_severity(incident_type, description)
+        return fallback, "fallback"
 
     def post(self, request, *args, **kwargs):
         """Handles reporting of incidents"""
@@ -898,30 +968,8 @@ Return ONLY one word: "high", "medium", or "low"
             incident_type = data.get("incidentType", "Other")
             description = data.get("description", "")
             
-            # Analyze severity using both incident type and description
-            severity_response = self.chain.invoke({
-                "incident_type": incident_type,
-                "user_input": description
-            }).strip().lower()
-            
-            # Extract valid severity value - handle LLM refusals or errors
-            valid_severities = ['high', 'medium', 'low']
-            detected_severity = next((sev for sev in valid_severities if sev in severity_response), None)
-            
-            # Apply incident type minimum severity rules if LLM returned low
-            high_severity_types = ['Medical Emergency', 'Natural Disaster', 'Human Trafficking']
-            medium_min_types = ['Fire', 'Accident', 'Domestic Violence', 'Child Abuse', 
-                               'Sexual Harassment', 'Stalking', 'Missing Persons', 'Injury']
-            
-            if incident_type in high_severity_types:
-                data['severity'] = 'high'
-            elif detected_severity == 'low' and incident_type in medium_min_types:
-                data['severity'] = 'medium'
-            elif detected_severity:
-                data['severity'] = detected_severity
-            else:
-                # Default to medium if LLM fails to return valid severity
-                data['severity'] = 'medium'
+            severity_value, severity_response = self._resolve_severity(incident_type, description)
+            data['severity'] = severity_value
             
             print(f"Incident Type: {incident_type}, Description: {description[:100]}...")
             print(f"LLM Response: {severity_response}, Final Severity: {data['severity']}")
@@ -1057,12 +1105,15 @@ Return ONLY one word: "high", "medium", or "low"
 
     def is_similar_incident(self, new_description, previous_description):
         """Check if two incidents have similar descriptions using LLM"""
-        prompt = ChatPromptTemplate.from_messages([
-            ("system", "Based on the description of the two incidents, return only 'True' if they are similar, otherwise 'False'."),
-            ("human", "{newdata} \n {previousdata}")
-        ])
-        chain = prompt | _get_chat_model() | StrOutputParser()
-        return chain.invoke({"newdata": new_description, "previousdata": previous_description}).strip() == "True"
+        try:
+            prompt = ChatPromptTemplate.from_messages([
+                ("system", "Based on the description of the two incidents, return only 'True' if they are similar, otherwise 'False'."),
+                ("human", "{newdata} \n {previousdata}")
+            ])
+            chain = prompt | _get_chat_model() | StrOutputParser()
+            return chain.invoke({"newdata": new_description, "previousdata": previous_description}).strip() == "True"
+        except Exception:
+            return False
 
     def notify_existing_incident(self, incident):
         """Send notification if an incident is reported again"""
@@ -1474,6 +1525,39 @@ def send_email_example(subject, message, email):
         fail_silently=False,
     )
     return Response({'message': 'email sent successfully'})
+
+
+@api_view(['POST'])
+def submit_feedback(request):
+    name = str(request.data.get("name", "")).strip()
+    email = str(request.data.get("email", "")).strip()
+    feedback_type = str(request.data.get("feedback_type", "General")).strip()
+    message = str(request.data.get("message", "")).strip()
+
+    if not name or not email or not message:
+        return Response(
+            {"message": "Name, email, and message are required."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    subject = f"Feedback ({feedback_type}) from {name}"
+    body = f"Name: {name}\nEmail: {email}\nType: {feedback_type}\n\n{message}"
+
+    try:
+        send_mail(
+            subject=subject,
+            message=body,
+            from_email='jacelljamble@gmail.com',
+            recipient_list=[ADMIN_EMAIL],
+            fail_silently=False,
+        )
+    except Exception as exc:
+        return Response(
+            {"message": f"Failed to send feedback: {exc}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+    return Response({"message": "Feedback submitted successfully."}, status=status.HTTP_201_CREATED)
 
 
 # Function to get coordinates from Geoapify Geocoding API
