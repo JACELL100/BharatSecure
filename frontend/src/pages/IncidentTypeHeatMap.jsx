@@ -5,6 +5,7 @@ import L from "leaflet";
 import "leaflet.heat";
 import { ArrowLeft, Filter, Eye, EyeOff, MapPin, AlertCircle, Info } from "lucide-react";
 import API_BASE_URL from "@/lib/apiBase";
+import useUserLocation from "@/lib/UserLocation";
 
 // Custom marker icons
 const userLocationIcon = new L.Icon({
@@ -224,6 +225,19 @@ const MultiHeatMapLayer = ({ incidentsByType, activeTypes }) => {
   return null;
 };
 
+const MapCenterUpdater = ({ center, zoom }) => {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!center || center.length !== 2) {
+      return;
+    }
+    map.setView(center, zoom, { animate: true });
+  }, [map, center, zoom]);
+
+  return null;
+};
+
 // Legend Component with Categories
 const LegendComponent = ({ incidentsByType, activeTypes, onToggle, categoryFilter, setCategoryFilter }) => {
   const [isExpanded, setIsExpanded] = useState(true);
@@ -418,21 +432,15 @@ const IncidentTypeHeatMap = () => {
   const [categoryFilter, setCategoryFilter] = useState("All");
 
   const API_URL = API_BASE_URL;
+  const userLocation = useUserLocation();
+  const defaultCoordinates = [18.4576, 73.8507];
+  const [userCoordinates, setUserCoordinates] = useState(defaultCoordinates);
 
-  // Get user coordinates
-  const getCoordinates = () => {
-    try {
-      const coordinates = JSON.parse(localStorage.getItem("userCoordinates"));
-      if (coordinates?.latitude && coordinates?.longitude) {
-        return [coordinates.latitude, coordinates.longitude];
-      }
-    } catch (error) {
-      console.error("Error parsing coordinates:", error);
+  useEffect(() => {
+    if (userLocation?.latitude && userLocation?.longitude) {
+      setUserCoordinates([userLocation.latitude, userLocation.longitude]);
     }
-    return [18.4576, 73.8507]; // Default: Pune
-  };
-
-  const userCoordinates = getCoordinates();
+  }, [userLocation]);
 
   const parseLocation = (location) => {
     if (!location) {
@@ -653,6 +661,7 @@ const IncidentTypeHeatMap = () => {
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         />
+        <MapCenterUpdater center={userCoordinates} zoom={13} />
         <Marker position={userCoordinates} icon={userLocationIcon}>
           <Popup>
             <div className="text-center">

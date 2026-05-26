@@ -55,7 +55,8 @@ const CardContent = ({ children, className = "" }) => (
 const AnalyticsDashboard = () => {
   const [analyticsData, setAnalyticsData] = useState(null);
   const [loading, setLoading] = useState(true);
-    const API_HOST = import.meta.env.VITE_API_HOST;
+  const [timeRange, setTimeRange] = useState(30);
+  const API_HOST = import.meta.env.VITE_API_HOST;
   const API_URL = (import.meta.env.VITE_API_URL || "https://bharatsecure-backend.onrender.com").replace(/\/+$/, "");
   console.log("API Host:", API_HOST);
   console.log("API_URL:", API_URL);
@@ -63,8 +64,9 @@ const AnalyticsDashboard = () => {
   useEffect(() => {
     const fetchAnalytics = async () => {
       try {
+        setLoading(true);
         const response = await fetch(
-          `${API_URL}/api/incident-analysis/`,
+          `${API_URL}/api/incident-analysis/?days=${timeRange}`,
           {
             method: "GET",
             headers: {
@@ -82,7 +84,7 @@ const AnalyticsDashboard = () => {
     };
 
     fetchAnalytics();
-  }, []);
+  }, [API_URL, timeRange]);
 
   if (loading) {
     return (
@@ -122,9 +124,21 @@ const AnalyticsDashboard = () => {
   return (
     <div className="p-8 pt-28 space-y-8 bg-[#001830] min-h-screen">
       {/* Dashboard Title */}
-      <h1 className="text-4xl font-bold text-cyan-400 mb-8 text-center drop-shadow-[0_0_8px_rgba(34,211,238,0.5)] hover:text-cyan-300 transition-colors duration-300">
-        Incident Analytics Dashboard
-      </h1>
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <h1 className="text-4xl font-bold text-cyan-400 text-center md:text-left drop-shadow-[0_0_8px_rgba(34,211,238,0.5)] hover:text-cyan-300 transition-colors duration-300">
+          Incident Analytics Dashboard
+        </h1>
+        <select
+          className="w-full md:w-auto px-4 py-2 bg-[#002345] text-cyan-200 border border-cyan-400/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
+          value={timeRange}
+          onChange={(e) => setTimeRange(Number(e.target.value))}
+        >
+          <option value={7}>Last 7 days</option>
+          <option value={30}>Last 30 days</option>
+          <option value={90}>Last 90 days</option>
+          <option value={365}>Last year</option>
+        </select>
+      </div>
 
       {/* Charts */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">

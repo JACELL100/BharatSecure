@@ -66,7 +66,7 @@ const IncidentDashboardUser = () => {
 
         setLoading(true);
         const response = await fetch(
-          `${API_URL}/api/incident-chart-user/`,
+          `${API_URL}/api/incident-chart-user/?days=${timeRange}`,
           {
             method: "GET",
             headers: {

@@ -2386,7 +2386,7 @@ def get_incident_analytics(request):
         )
     # Get the admin user
     admin = Admin.objects.get(id=token['user_id'])
-    
+
     # Base queryset filtered by admin's station
     base_queryset = Incidents.objects.all()
     if admin.police_station:
@@ -2399,9 +2399,17 @@ def get_incident_analytics(request):
         base_queryset = base_queryset.filter(municipal_corporation=admin.municipal_corporation)
     
     
-    # Get date range for last 30 days
+    # Optional date range filtering (defaults to last 30 days)
+    try:
+        days = int(request.GET.get('days', 30))
+        if days <= 0:
+            return Response({"error": "Invalid days parameter"}, status=status.HTTP_400_BAD_REQUEST)
+    except ValueError:
+        return Response({"error": "Invalid days parameter"}, status=status.HTTP_400_BAD_REQUEST)
+
     end_date = timezone.now()
-    start_date = end_date - timedelta(days=30)
+    start_date = end_date - timedelta(days=days)
+    base_queryset = base_queryset.filter(reported_at__gte=start_date)
     
     # Get incidents by type
     incidents_by_type = base_queryset.values('incidentType')\
@@ -2416,10 +2424,8 @@ def get_incident_analytics(request):
     incidents_by_status = base_queryset.values('status')\
         .annotate(count=Count('id'))
 
-    # Get daily incidents for the last 30 days
-    daily_incidents = base_queryset.filter(
-        reported_at__range=[start_date, end_date]
-    ).annotate(
+    # Get daily incidents for the selected range
+    daily_incidents = base_queryset.annotate(
         date=TruncDate('reported_at')
     ).values('date').annotate(
         count=Count('id')

@@ -5,6 +5,7 @@ import L from "leaflet";
 import "leaflet.heat";
 import Legend from "./Legend";
 import API_BASE_URL from "@/lib/apiBase";
+import useUserLocation from "@/lib/UserLocation";
 
 // Custom marker icon for police stations
 const policeStationIcon = new L.Icon({
@@ -97,27 +98,33 @@ const HeatMapLayer = ({ data }) => {
   return null;
 };
 
+const MapCenterUpdater = ({ center, zoom }) => {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!center || center.length !== 2) {
+      return;
+    }
+    map.setView(center, zoom, { animate: true });
+  }, [map, center, zoom]);
+
+  return null;
+};
+
 // Main Heatmap component
 const HeatMap = () => {
   const [heatmapData, setHeatmapData] = useState([]);
   const [policeStations, setPoliceStations] = useState([]);
   const API_URL = API_BASE_URL;
+  const userLocation = useUserLocation();
+  const defaultCoordinates = [18.4576, 73.8507];
+  const [userCoordinates, setUserCoordinates] = useState(defaultCoordinates);
 
-  // Get coordinates from localStorage or use default
-  const getCoordinates = () => {
-    try {
-      const coordinates = JSON.parse(localStorage.getItem("userCoordinates"));
-      if (coordinates && coordinates.latitude && coordinates.longitude) {
-        return [coordinates.latitude, coordinates.longitude];
-      }
-    } catch (error) {
-      console.error("Error parsing user coordinates from localStorage:", error);
+  useEffect(() => {
+    if (userLocation?.latitude && userLocation?.longitude) {
+      setUserCoordinates([userLocation.latitude, userLocation.longitude]);
     }
-    // Default coordinates (e.g., Pune)
-    return [18.4576, 73.8507];
-  };
-
-  const userCoordinates = getCoordinates();
+  }, [userLocation]);
 
   const parseLocation = (location) => {
     if (!location) {
@@ -213,7 +220,7 @@ const HeatMap = () => {
       .catch((error) =>
         console.error("Error fetching police stations:", error)
       );
-  }, [userCoordinates]);
+  }, [overpassUrl]);
 
   return (
     <MapContainer
@@ -225,6 +232,7 @@ const HeatMap = () => {
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
       />
+      <MapCenterUpdater center={userCoordinates} zoom={15} />
       <Marker position={userCoordinates} icon={userLocationIcon}>
         <Popup>You are here!</Popup>
       </Marker>
