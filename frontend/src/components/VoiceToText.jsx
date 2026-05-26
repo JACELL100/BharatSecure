@@ -14,7 +14,7 @@ const VoiceInput = () => {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [loadingSpinner, setLoadingSpinner] = useState(false);
-  const API_URL = (import.meta.env.VITE_API_URL || "https://bharatsecure-backend.onrender.com").replace(/\/$/, "");
+  const API_URL = (import.meta.env.VITE_API_URL || "https://bharatsecure-backend.onrender.com").replace(/\/+$/, "");
 
   // Store recognition instance in useRef
   const recognitionRef = useRef(null);

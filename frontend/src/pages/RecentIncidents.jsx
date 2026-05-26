@@ -35,7 +35,7 @@ const RecentIncidents = () => {
   const { isLoggedIn } = useAuth();
   const [currentFilter, setCurrentFilter] = useState(null);
   const API_HOST = import.meta.env.VITE_API_HOST;
-  const API_URL = import.meta.env.VITE_API_URL;
+  const API_URL = (import.meta.env.VITE_API_URL || "https://bharatsecure-backend.onrender.com").replace(/\/+$/, "");
 
   // Add reset filter function
   const resetFilters = () => {

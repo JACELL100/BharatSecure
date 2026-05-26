@@ -7,7 +7,7 @@ const Sos = () => {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
   const [particles, setParticles] = useState([]);
-  const API_URL = (import.meta.env.VITE_API_URL || "https://bharatsecure-backend.onrender.com").replace(/\/$/, "");
+  const API_URL = (import.meta.env.VITE_API_URL || "https://bharatsecure-backend.onrender.com").replace(/\/+$/, "");
   // const [ripples, setRipples] = useState([]);
 
   const features = [

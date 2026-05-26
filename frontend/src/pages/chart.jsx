@@ -56,7 +56,7 @@ const AnalyticsDashboard = () => {
   const [analyticsData, setAnalyticsData] = useState(null);
   const [loading, setLoading] = useState(true);
     const API_HOST = import.meta.env.VITE_API_HOST;
-  const API_URL = import.meta.env.VITE_API_URL;
+  const API_URL = (import.meta.env.VITE_API_URL || "https://bharatsecure-backend.onrender.com").replace(/\/+$/, "");
   console.log("API Host:", API_HOST);
   console.log("API_URL:", API_URL);
 

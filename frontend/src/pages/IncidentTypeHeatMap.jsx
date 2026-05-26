@@ -389,7 +389,7 @@ const IncidentTypeHeatMap = () => {
   const [totalIncidents, setTotalIncidents] = useState(0);
   const [categoryFilter, setCategoryFilter] = useState("All");
 
-  const API_URL = (import.meta.env.VITE_API_URL || "https://bharatsecure-backend.onrender.com").replace(/\/$/, "");
+  const API_URL = (import.meta.env.VITE_API_URL || "https://bharatsecure-backend.onrender.com").replace(/\/+$/, "");
   const token = localStorage.getItem("accessToken");
 
   // Get user coordinates

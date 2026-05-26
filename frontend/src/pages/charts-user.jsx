@@ -50,7 +50,7 @@ const IncidentDashboardUser = () => {
   });
   const [timeRange, setTimeRange] = useState(30);
   const [loading, setLoading] = useState(true);
-  const API_URL = import.meta.env.VITE_API_URL;
+  const API_URL = (import.meta.env.VITE_API_URL || "https://bharatsecure-backend.onrender.com").replace(/\/+$/, "");
 
   const hasData = (arr) => Array.isArray(arr) && arr.length > 0;
 

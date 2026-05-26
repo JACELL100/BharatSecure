@@ -15,7 +15,7 @@ const UploadPage = () => {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const API_HOST = import.meta.env.VITE_API_HOST;
-  const API_URL = import.meta.env.VITE_API_URL;
+  const API_URL = (import.meta.env.VITE_API_URL || "https://bharatsecure-backend.onrender.com").replace(/\/+$/, "");
 
   const handleFileSelect = (event) => {
     setSelectedFile(event.target.files[0]);

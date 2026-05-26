@@ -10,7 +10,7 @@ const FeedbackForm = () => {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
   const API_HOST = import.meta.env.VITE_API_HOST;
-  const API_URL = import.meta.env.VITE_API_URL;
+  const API_URL = (import.meta.env.VITE_API_URL || "https://bharatsecure-backend.onrender.com").replace(/\/+$/, "");
 
   const handleSubmit = async (e) => {
     e.preventDefault();

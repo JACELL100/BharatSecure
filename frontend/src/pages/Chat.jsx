@@ -9,7 +9,7 @@ const Chat = () => {
   const [isUsernameSet, setIsUsernameSet] = useState(false);
   const messagesEndRef = useRef(null);
   const lastMessageTimestamp = useRef(null);
-  const API_URL = import.meta.env.VITE_API_URL;
+  const API_URL = (import.meta.env.VITE_API_URL || "https://bharatsecure-backend.onrender.com").replace(/\/+$/, "");
   
 
   const XYZ_URL = `${API_URL}/api/chat`;

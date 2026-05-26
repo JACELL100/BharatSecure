@@ -16,7 +16,7 @@ const VRViewer = () => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showInstructions, setShowInstructions] = useState(true);
   const API_HOST = import.meta.env.VITE_API_HOST;
-  const API_URL = import.meta.env.VITE_API_URL;
+  const API_URL = (import.meta.env.VITE_API_URL || "https://bharatsecure-backend.onrender.com").replace(/\/+$/, "");
 
   useEffect(() => {
     fetchPhoto();

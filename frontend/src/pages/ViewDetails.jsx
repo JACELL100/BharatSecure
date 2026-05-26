@@ -10,7 +10,7 @@ const ViewDetails = () => {
   const { id } = useParams();
   const [fullDetails, setFullDetails] = useState(null);
   const API_HOST = import.meta.env.VITE_API_HOST;
-  const API_URL = import.meta.env.VITE_API_URL;
+  const API_URL = (import.meta.env.VITE_API_URL || "https://bharatsecure-backend.onrender.com").replace(/\/+$/, "");
 
   useEffect(() => {
     const fetchIncidentDetails = async () => {

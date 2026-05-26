@@ -34,7 +34,7 @@ const RecentIncidents = () => {
   const [isMapModalOpen, setIsMapModalOpen] = useState(false);
   const { isLoggedIn } = useAuth();
   const API_HOST = import.meta.env.VITE_API_HOST;
-  const API_URL = import.meta.env.VITE_API_URL;
+  const API_URL = (import.meta.env.VITE_API_URL || "https://bharatsecure-backend.onrender.com").replace(/\/+$/, "");
 
   // MetaMask state
   const [walletAddress, setWalletAddress] = useState(null);

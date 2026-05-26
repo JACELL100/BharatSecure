@@ -21,7 +21,7 @@ const AdminDashboard = () => {
   const [flaggedIncidents, setFlaggedIncidents] = useState([]);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
-  const API_URL = import.meta.env.VITE_API_URL;
+  const API_URL = (import.meta.env.VITE_API_URL || "https://bharatsecure-backend.onrender.com").replace(/\/+$/, "");
   const token = localStorage.getItem("accessToken");
 
   // Helper function to get a valid Google Maps URL from incident data

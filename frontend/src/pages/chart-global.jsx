@@ -21,7 +21,7 @@ ChartJS.register(
   Legend
 );
 
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL = (import.meta.env.VITE_API_URL || "https://bharatsecure-backend.onrender.com").replace(/\/+$/, "");
 const panelClass = "bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 shadow-2xl";
 const chartFrameClass = "h-[300px] md:h-[380px] bg-black/20 rounded-xl p-3 md:p-4 border border-white/10";
 

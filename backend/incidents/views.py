@@ -528,13 +528,16 @@ class LoginView(APIView):
             # Generate JWT tokens
             refresh = RefreshToken.for_user(user)
             refresh['user_type'] = user_type
+            # Also add user_type to the access token
+            access = refresh.access_token
+            access['user_type'] = user_type
             return Response({
                 "message": "Login successful",
                 "user_type": user_type,
                 "user_id": user.id,
                 "email": user.email,
                 "tokens": {
-                    "access": str(refresh.access_token),
+                    "access": str(access),
                     "refresh": str(refresh)
                 }
             }, status=status.HTTP_200_OK)

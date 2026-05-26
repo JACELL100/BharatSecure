@@ -9,7 +9,7 @@ const Chatbot = () => {
   const [micClick, setMicClick] = useState(false);
   const chatContainerRef = useRef(null);
   const API_HOST = import.meta.env.VITE_API_HOST;
-  const API_URL = import.meta.env.VITE_API_URL;
+  const API_URL = (import.meta.env.VITE_API_URL || "https://bharatsecure-backend.onrender.com").replace(/\/+$/, "");
 
   useEffect(() => {
     if (chatContainerRef.current) {

@@ -12,7 +12,7 @@ import FloatingChatbot from "@/components/FloatingChatbot";
 
 function IncidentList() {
   const [incidents, setIncidents] = useState([]);
-  const API_URL = (import.meta.env.VITE_API_URL || "https://bharatsecure-backend.onrender.com").replace(/\/$/, "");
+  const API_URL = (import.meta.env.VITE_API_URL || "https://bharatsecure-backend.onrender.com").replace(/\/+$/, "");
 
   useEffect(() => {
     async function fetchIncidents() {
