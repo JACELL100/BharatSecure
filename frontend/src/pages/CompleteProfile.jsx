@@ -15,6 +15,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import Footer from "../components/Footer";
 import { useAuth } from "@/context/AuthContext";
+import API_BASE_URL from "@/lib/apiBase";
 
 const FIELD_LABELS = {
   first_name: "First Name",
@@ -25,7 +26,7 @@ const FIELD_LABELS = {
 };
 
 const CompleteProfile = () => {
-  const API_URL = import.meta.env.VITE_API_URL;
+  const API_URL = API_BASE_URL;
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));

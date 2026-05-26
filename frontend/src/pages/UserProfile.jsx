@@ -1,17 +1,31 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import API_BASE_URL from "@/lib/apiBase";
 
 const UserProfile = () => {
   const { userId } = useParams();
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
-  const API_HOST = import.meta.env.VITE_API_HOST;
-  const API_URL = import.meta.env.VITE_API_URL;
+  const API_URL = API_BASE_URL;
 
   useEffect(() => {
     const fetchUserDetails = async () => {
+      const token = localStorage.getItem("accessToken");
+      if (!token) {
+        navigate("/login", { replace: true });
+        return;
+      }
+
       try {
-        const response = await fetch(`${API_URL}/api/user/${userId}/`);
+        const response = await fetch(`${API_URL}/api/user/${userId}/`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        if (response.status === 401 || response.status === 403) {
+          navigate("/login", { replace: true });
+          return;
+        }
         if (response.ok) {
           const data = await response.json();
           setUser(data);
@@ -26,7 +40,7 @@ const UserProfile = () => {
     };
 
     fetchUserDetails();
-  }, [userId]);
+  }, [API_URL, navigate, userId]);
 
   if (!user) {
     return <div className="text-center text-cyan-300 font-bold mt-10">Loading...</div>;

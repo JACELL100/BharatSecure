@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from geopy.distance import great_circle
 from utils.comments import contains_cuss_words, is_spam
 from incidents.models import DisasterReliefStations, FireStations, PoliceStations, Admin, MunicipalCorporation
-from .serializers import CommentSerializer, IncidentSerializer, UserSerializer
+from .serializers import CommentSerializer, IncidentSerializer, PublicCommentSerializer, PublicIncidentSerializer, UserSerializer
 from incidents.models import DisasterReliefStations, FireStations, PoliceStations, Admin, MunicipalCorporation
 from .serializers import IncidentSerializer
 from django.core.mail import send_mail
@@ -323,6 +323,21 @@ def AccessToken(token_str):
     return {"user_id": user.id, "user_type": "user"}
 
 
+def _extract_token_info(request):
+    auth_header = request.headers.get("Authorization") or request.META.get("HTTP_AUTHORIZATION")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        return None
+
+    token_str = auth_header.split(" ")[1]
+    if not token_str or token_str in {"null", "undefined"}:
+        return None
+
+    try:
+        return AccessToken(token_str)
+    except Exception:
+        return None
+
+
 def _get_missing_profile_fields(user, claims=None):
     claims = claims or {}
     metadata = claims.get("user_metadata") or {}
@@ -450,7 +465,7 @@ def _get_chat_model():
 @api_view(['GET'])
 def latest_incidents(request):
     incidents = Incidents.objects.order_by('-reported_at')[:9]  # Adjust the number of incidents as needed
-    serializer = IncidentSerializer(incidents, many=True)
+    serializer = PublicIncidentSerializer(incidents, many=True)
     return Response(serializer.data)
 
 class SignUpView(APIView):
@@ -1479,7 +1494,7 @@ def get_coordinates(location):
         raise ValueError(f"Could not find coordinates for location: {location}")
     
 class LatestIncidentsView(generics.ListAPIView):
-    serializer_class = IncidentSerializer
+    serializer_class = PublicIncidentSerializer
     queryset = Incidents.objects.all().order_by('-reported_at')  # Get latest first
     
     def get_queryset(self):
@@ -1551,13 +1566,13 @@ def all_user_incidents(request):
 @api_view(['GET'])
 def all_ongoing_incidents(request):
     incidents = Incidents.objects.filter(status="submitted")
-    serializer = IncidentSerializer(incidents, many=True)
+    serializer = PublicIncidentSerializer(incidents, many=True)
     return Response(serializer.data, status=200)
 
 @api_view(['GET'])
 def all_incidents(request):
     incidents = Incidents.objects.all()
-    serializer = IncidentSerializer(incidents, many=True)
+    serializer = PublicIncidentSerializer(incidents, many=True)
     return Response(serializer.data, status=200)
 
 @api_view(['GET', 'POST'])
@@ -1626,7 +1641,7 @@ class CommentListCreateView(APIView):
 
     def get(self, request, incident_id):
         comments = Comment.objects.filter(commented_on_id=incident_id).order_by('-commented_at')
-        serializer = CommentSerializer(comments, many=True)
+        serializer = PublicCommentSerializer(comments, many=True)
         return Response(serializer.data)
 
     def post(self, request, incident_id):
@@ -1664,8 +1679,11 @@ class CommentListCreateView(APIView):
 
             serializer = CommentSerializer(data=serializer_data)
             if serializer.is_valid():
-                serializer.save(commented_by_id=token['user_id'])
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
+                comment = serializer.save(commented_by_id=token['user_id'])
+                return Response(
+                    PublicCommentSerializer(comment).data,
+                    status=status.HTTP_201_CREATED
+                )
 
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -1688,12 +1706,19 @@ def save_score(request):
 
 @api_view(['GET'])
 def view_incident(request, id):
-   try:
-       incident = get_object_or_404(Incidents, id=id)
-       serializer = IncidentSerializer(incident, context={'request': request})
-       return Response(serializer.data, status=200)
-   except Exception as e:
-       return Response({'error': str(e)}, status=400)
+    incident = get_object_or_404(Incidents, id=id)
+    token_info = _extract_token_info(request)
+    can_view_private = False
+
+    if token_info:
+        if token_info.get("user_type") == "admin":
+            can_view_private = True
+        elif token_info.get("user_type") == "user" and incident.reported_by_id == token_info.get("user_id"):
+            can_view_private = True
+
+    serializer_class = IncidentSerializer if can_view_private else PublicIncidentSerializer
+    serializer = serializer_class(incident, context={'request': request})
+    return Response(serializer.data, status=200)
 
 
 def get_google_maps_link(latitude, longitude):
@@ -2077,6 +2102,22 @@ from django.views import View
 class UserDetailView(View):
     def get(self, request, user_id):
         user = get_object_or_404(User, id=user_id)
+        token_info = _extract_token_info(request)
+        can_view_private = False
+
+        if token_info:
+            if token_info.get("user_type") == "admin":
+                can_view_private = True
+            elif token_info.get("user_type") == "user" and token_info.get("user_id") == user.id:
+                can_view_private = True
+
+        if not can_view_private:
+            return Response({
+                "id": user.id,
+                "first_name": user.first_name,
+                "last_name": user.last_name,
+            })
+
         user_data = {
             "id": user.id,
             "first_name": user.first_name,

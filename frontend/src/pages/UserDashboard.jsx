@@ -17,6 +17,7 @@ import FloatingChatbot from "@/components/FloatingChatbot";
 import { Navigate, useNavigate } from "react-router-dom";
 import OrderProgress from "@/components/ProgressBar";
 import ChartsUser from "./charts-user";
+import API_BASE_URL from "@/lib/apiBase";
 
 const UserDashboard = () => {
   const navigate = useNavigate();
@@ -27,7 +28,7 @@ const UserDashboard = () => {
   const [resolved, setResolved] = useState(0);
   const [unresolved, setUnResolved] = useState(0);
   const [incidents, setIncidents] = useState([]);
-  const API_URL = import.meta.env.VITE_API_URL;
+  const API_URL = API_BASE_URL;
 
   const token = localStorage.getItem("accessToken");
 

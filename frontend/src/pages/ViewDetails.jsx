@@ -4,24 +4,38 @@ import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { MapPin } from "lucide-react";
 import LocationDisplay from "@/components/LocationDisplay";
+import API_BASE_URL from "@/lib/apiBase";
 
 const ViewDetails = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const [fullDetails, setFullDetails] = useState(null);
-  const API_HOST = import.meta.env.VITE_API_HOST;
-  const API_URL = (import.meta.env.VITE_API_URL || "https://bharatsecure-backend.onrender.com").replace(/\/+$/, "");
+  const API_URL = API_BASE_URL;
 
   useEffect(() => {
     const fetchIncidentDetails = async () => {
+      const token = localStorage.getItem("accessToken");
+      const headers = { "Content-Type": "application/json" };
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      } else {
+        navigate("/login", { replace: true });
+        return;
+      }
+
       try {
         const response = await fetch(
           `${API_URL}/api/incident/${id}/`,
           {
             method: "GET",
-            headers: { "Content-Type": "application/json" },
+            headers,
           }
         );
+
+        if (response.status === 401 || response.status === 403) {
+          navigate("/login", { replace: true });
+          return;
+        }
 
         if (response.ok) {
           const data = await response.json();
@@ -37,7 +51,7 @@ const ViewDetails = () => {
     };
 
     fetchIncidentDetails();
-  }, [id]);
+  }, [API_URL, id, navigate]);
 
   if (!fullDetails) {
     return (
@@ -144,17 +158,20 @@ const ViewDetails = () => {
             </h2>
             <hr className="mb-4" />
             {fullDetails.comments && fullDetails.comments.length > 0 ? (
-              fullDetails.comments.map((comment, index) => (
-                <div key={index} className="mb-4 p-3 bg-slate-900/60 border border-cyan-200/15 rounded-lg">
-                  <p className="text-slate-200">
-                  <p className="text-sm font-semibold text-cyan-200 cursor-pointer hover:underline" onClick={() => navigate(`/user/${comment.commented_by.id}`)}>
-                    {comment.commented_by.first_name} {comment.commented_by.last_name}
-                  </p>
-                    {comment.comment}
-                  </p>
-                  <p className="text-slate-400 text-sm">{comment.created_at}</p>
-                </div>
-              ))
+              fullDetails.comments.map((comment, index) => {
+                const commentTimestamp = comment.commented_at || comment.created_at;
+                return (
+                  <div key={index} className="mb-4 p-3 bg-slate-900/60 border border-cyan-200/15 rounded-lg">
+                    <p className="text-slate-200">
+                      <p className="text-sm font-semibold text-cyan-200 cursor-pointer hover:underline" onClick={() => navigate(`/user/${comment.commented_by.id}`)}>
+                        {comment.commented_by.first_name} {comment.commented_by.last_name}
+                      </p>
+                      {comment.comment}
+                    </p>
+                    <p className="text-slate-400 text-sm">{commentTimestamp}</p>
+                  </div>
+                );
+              })
             ) : (
               <p className="text-slate-400">
                 No comments available for this incident.

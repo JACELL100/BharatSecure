@@ -6,11 +6,13 @@ from .models import Message
 from .serializers import MessageSerializer
 
 class MessageListCreateView(generics.ListCreateAPIView):
-    queryset = Message.objects.all().order_by('-timestamp')[:50]  # Last 50 messages
     serializer_class = MessageSerializer
-    
+
+    def get_queryset(self):
+        return Message.objects.all().order_by('-timestamp')
+
     def list(self, request, *args, **kwargs):
-        queryset = self.get_queryset().order_by('timestamp')  # Oldest first for display
+        queryset = self.get_queryset().order_by('timestamp')[:50]  # Oldest first for display
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
