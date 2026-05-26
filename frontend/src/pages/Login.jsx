@@ -27,13 +27,14 @@ const Login = () => {
   });
   const [errors, setErrors] = useState({});
   const [isCheckingProfile, setIsCheckingProfile] = useState(false);
-  const { isLoggedIn, signInWithPassword, signInWithGoogle } = useAuth();
+  const { isLoggedIn, signInWithPassword, signInWithGoogle, setLocalSession } = useAuth();
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   useEffect(() => {
-    if (!isLoggedIn) {
+    const storedUserType = localStorage.getItem("userType");
+    if (!isLoggedIn || storedUserType === "admin") {
       return;
     }
 
@@ -131,11 +132,17 @@ const Login = () => {
 
           const {
             tokens: { access, refresh },
+            user_type: responseUserType,
           } = response.data;
-          localStorage.setItem("accessToken", access);
-          localStorage.setItem("refreshToken", refresh);
-          localStorage.setItem("userType", response.data.user_type);
-          navigate(response.data.user_type === "user" ? "/my-reports" : "/admin");
+          const userType = responseUserType || "admin";
+
+          setLocalSession({
+            accessToken: access,
+            refreshToken: refresh,
+            userType,
+          });
+
+          navigate(userType === "user" ? "/my-reports" : "/admin");
           return;
         }
 

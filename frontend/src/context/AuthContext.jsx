@@ -3,6 +3,22 @@ import { supabase } from "@/lib/supabaseClient";
 
 const AuthContext = createContext();
 
+const normalizeStoredValue = (value) => {
+  if (!value || value === "null" || value === "undefined") {
+    return null;
+  }
+  return value;
+};
+
+const readStoredAuth = () => {
+  const accessToken = normalizeStoredValue(
+    localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken")
+  );
+  const userType = normalizeStoredValue(localStorage.getItem("userType"));
+
+  return { accessToken, userType };
+};
+
 const clearAuthStorage = () => {
   localStorage.removeItem("accessToken");
   localStorage.removeItem("refreshToken");
@@ -31,12 +47,24 @@ export const AuthProvider = ({ children }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState(null);
 
+  const hydrateFromStorage = () => {
+    const { accessToken, userType } = readStoredAuth();
+    if (accessToken && userType) {
+      setIsLoggedIn(true);
+      setUser(userType === "admin" ? { role: "admin" } : null);
+      return true;
+    }
+    return false;
+  };
+
   useEffect(() => {
     let isMounted = true;
 
+    const storedAuth = hydrateFromStorage();
+
     const bootstrap = async () => {
       if (!supabase) {
-        if (isMounted) {
+        if (isMounted && !storedAuth) {
           clearAuthStorage();
           setIsLoggedIn(false);
           setUser(null);
@@ -47,6 +75,13 @@ export const AuthProvider = ({ children }) => {
       const { data, error } = await supabase.auth.getSession();
 
       if (!isMounted) {
+        return;
+      }
+
+      const { accessToken: storedAccessToken, userType: storedUserType } = readStoredAuth();
+      if (storedUserType === "admin" && storedAccessToken) {
+        setIsLoggedIn(true);
+        setUser({ role: "admin" });
         return;
       }
 
@@ -65,6 +100,13 @@ export const AuthProvider = ({ children }) => {
 
     const { data: authListener } = supabase
       ? supabase.auth.onAuthStateChange((_event, session) => {
+          const { accessToken: storedAccessToken, userType: storedUserType } = readStoredAuth();
+          if (storedUserType === "admin" && storedAccessToken) {
+            setIsLoggedIn(true);
+            setUser({ role: "admin" });
+            return;
+          }
+
           if (session?.access_token) {
             syncSessionStorage(session);
             setIsLoggedIn(true);
@@ -142,6 +184,24 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => signInWithPassword(email, password);
 
+  const setLocalSession = ({ accessToken, refreshToken, userType }) => {
+    if (accessToken) {
+      localStorage.setItem("accessToken", accessToken);
+    }
+    if (refreshToken) {
+      localStorage.setItem("refreshToken", refreshToken);
+    }
+    if (userType) {
+      localStorage.setItem("userType", userType);
+    }
+    localStorage.setItem("lastLoginTime", String(Date.now()));
+
+    if (accessToken && userType) {
+      setIsLoggedIn(true);
+      setUser(userType === "admin" ? { role: "admin" } : null);
+    }
+  };
+
   const logout = async () => {
     if (supabase) {
       await supabase.auth.signOut();
@@ -158,6 +218,7 @@ export const AuthProvider = ({ children }) => {
         user,
         login,
         logout,
+        setLocalSession,
         signInWithPassword,
         signUpWithPassword,
         signInWithGoogle,
