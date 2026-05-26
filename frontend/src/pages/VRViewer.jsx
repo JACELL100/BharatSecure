@@ -1,11 +1,16 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import * as THREE from 'three';
 import { ArrowLeft, Eye, RotateCcw, Maximize, Info, Navigation } from 'lucide-react';
 
 const VRViewer = () => {
-  const { photoId } = useParams();
+  const { photoId, incidentId } = useParams();
+  const location = useLocation();
+  const resolvedId = photoId || incidentId;
+  const searchParams = new URLSearchParams(location.search);
+  const directImageUrl = searchParams.get('image');
+  const directTitle = searchParams.get('title');
   const mountRef = useRef(null);
   const sceneRef = useRef(null);
   const rendererRef = useRef(null);
@@ -19,8 +24,18 @@ const VRViewer = () => {
   const API_URL = (import.meta.env.VITE_API_URL || "https://bharatsecure-backend.onrender.com").replace(/\/+$/, "");
 
   useEffect(() => {
+    if (directImageUrl) {
+      setPhoto({
+        image: directImageUrl,
+        title: directTitle || (resolvedId ? `Incident ${resolvedId}` : 'Incident Evidence'),
+      });
+      setError(null);
+      setLoading(false);
+      return;
+    }
+
     fetchPhoto();
-  }, [photoId]);
+  }, [directImageUrl, directTitle, resolvedId]);
 
   useEffect(() => {
     if (photo) {
@@ -36,8 +51,14 @@ const VRViewer = () => {
   }, [photo]);
 
   const fetchPhoto = async () => {
+    if (!resolvedId) {
+      setError('Photo not found');
+      setLoading(false);
+      return;
+    }
+
     try {
-      const response = await fetch(`${API_URL}/api/photos/${photoId}/`);
+      const response = await fetch(`${API_URL}/api/photos/${resolvedId}/`);
       if (response.ok) {
         const data = await response.json();
         setPhoto(data);
@@ -225,7 +246,7 @@ const VRViewer = () => {
           <h3 className="text-xl font-bold text-red-400 mb-2">Error</h3>
           <p className="text-gray-300 mb-6">{error}</p>
           <Link 
-            to="/photos"
+            to={directImageUrl ? "/admin" : "/photos"}
             className="inline-flex items-center gap-2 px-6 py-3 bg-cyan-500 text-white rounded-xl hover:bg-cyan-600 transition-colors duration-200"
           >
             <ArrowLeft className="w-5 h-5" />

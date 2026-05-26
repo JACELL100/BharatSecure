@@ -63,6 +63,13 @@ const UserDashboard = () => {
     if (severity === "high") return "text-red-400 border-red-300  border-2";
   };
 
+  const isImageEvidence = (fileUrl) => {
+    if (!fileUrl) {
+      return false;
+    }
+    return /\.(png|jpe?g|webp|gif)$/i.test(fileUrl);
+  };
+
   // const getStatusColor = (status) => {
   //   if (status === "Resolved") return "bg-green-100 text-green-300";
   //   if (status === "submitted") return "bg-red-100 text-red-300";
@@ -229,6 +236,9 @@ const UserDashboard = () => {
                       Location
                     </th>
                     <th className="p-4 text-center text-gray-400 font-medium">
+                      Evidence
+                    </th>
+                    <th className="p-4 text-center text-gray-400 font-medium">
                       Actions
                     </th>
                   </tr>
@@ -312,6 +322,29 @@ const UserDashboard = () => {
                           >
                             <MapPin className="text-xl" />
                           </a>
+                        </td>
+                        <td className="p-4">
+                          {incident.file ? (
+                            <div className="flex items-center justify-center gap-2">
+                              {isImageEvidence(incident.file) && (
+                                <img
+                                  src={incident.file}
+                                  alt={`Evidence for incident ${incident.id}`}
+                                  className="h-10 w-10 rounded-lg object-cover border border-white/10"
+                                />
+                              )}
+                              <a
+                                href={incident.file}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-sky-400 hover:text-sky-300 text-xs font-semibold"
+                              >
+                                View
+                              </a>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-gray-500">None</span>
+                          )}
                         </td>
                         <td className="p-4">
                           <Popover>
@@ -416,6 +449,29 @@ const UserDashboard = () => {
                         {incident.description}
                       </p>
                     </div>
+
+                    {incident.file && (
+                      <div className="mb-4">
+                        <p className="text-gray-400 text-sm mb-2">Evidence:</p>
+                        <div className="flex items-center gap-3">
+                          {isImageEvidence(incident.file) && (
+                            <img
+                              src={incident.file}
+                              alt={`Evidence for incident ${incident.id}`}
+                              className="h-12 w-12 rounded-lg object-cover border border-white/10"
+                            />
+                          )}
+                          <a
+                            href={incident.file}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sky-400 text-sm font-semibold hover:text-sky-300 transition-colors"
+                          >
+                            View Evidence
+                          </a>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Severity Badge */}
                     <div className="mb-4">

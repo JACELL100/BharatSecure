@@ -24,6 +24,7 @@ from rest_framework_simplejwt.tokens import RefreshToken, AccessToken as SimpleJ
 import logging
 logger = logging.getLogger(__name__)
 from rest_framework import generics, status
+from rest_framework.parsers import MultiPartParser, FormParser
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from rest_framework import viewsets, status
 from langchain_core.output_parsers import StrOutputParser
@@ -43,6 +44,7 @@ from django.db.models.functions import (
 import os
 import hashlib
 from urllib.parse import urlparse
+from utils.supabase_storage import get_storage
 
 import jwt
 from jwt import InvalidTokenError, PyJWKClient
@@ -746,6 +748,8 @@ class CurrentUserProfileView(APIView):
         
 
 class form_report(APIView):
+    parser_classes = [MultiPartParser, FormParser]
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.llm = None
@@ -896,6 +900,24 @@ Return ONLY one word: "high", "medium", or "low"
         except Exception as exc:
             self.chain_error = str(exc)
 
+    def _validate_evidence_file(self, evidence_file):
+        max_bytes = getattr(settings, "INCIDENT_EVIDENCE_MAX_BYTES", 10 * 1024 * 1024)
+        allowed_types = {
+            "image/jpeg",
+            "image/png",
+            "image/webp",
+            "image/gif",
+        }
+
+        if evidence_file.size and evidence_file.size > max_bytes:
+            return "Evidence file must be 10MB or smaller."
+
+        content_type = (evidence_file.content_type or "").lower()
+        if content_type not in allowed_types:
+            return "Evidence must be an image (JPG, PNG, WEBP, or GIF)."
+
+        return None
+
     def _fallback_severity(self, incident_type, description):
         high_severity_types = {'Medical Emergency', 'Natural Disaster', 'Human Trafficking'}
         medium_min_types = {
@@ -963,6 +985,31 @@ Return ONLY one word: "high", "medium", or "low"
         try:
             user = self.authenticate_user(request)
             data = request.data.copy()
+
+            evidence_file = request.FILES.get("file")
+            evidence_url = None
+            if evidence_file:
+                validation_error = self._validate_evidence_file(evidence_file)
+                if validation_error:
+                    return Response({"error": validation_error}, status=status.HTTP_400_BAD_REQUEST)
+
+                try:
+                    storage = get_storage()
+                    bucket_name = getattr(settings, "INCIDENT_EVIDENCE_BUCKET", "photos")
+                    folder_name = getattr(settings, "INCIDENT_EVIDENCE_FOLDER", "incident-evidence")
+                    evidence_url = storage.upload_file(
+                        file=evidence_file,
+                        bucket_name=bucket_name,
+                        folder=folder_name,
+                    )
+                    data["file"] = evidence_url
+                except Exception as exc:
+                    return Response(
+                        {"error": f"Evidence upload failed: {exc}"},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    )
+            else:
+                data.pop("file", None)
             
             # Get incident type and description for severity analysis
             incident_type = data.get("incidentType", "Other")
@@ -986,7 +1033,11 @@ Return ONLY one word: "high", "medium", or "low"
             existing_incident = self.find_similar_incident(data, lat, lon)
             if existing_incident:
                 existing_incident.count += 1
-                existing_incident.save()
+                if evidence_url and not existing_incident.file:
+                    existing_incident.file = evidence_url
+                    existing_incident.save(update_fields=["count", "file"])
+                else:
+                    existing_incident.save(update_fields=["count"])
                 self.notify_existing_incident(existing_incident)
                 return Response({
                     "message": "Incident reported successfully!",

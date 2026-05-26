@@ -77,6 +77,7 @@ const IncidentReportForm = () => {
   };
 
   const [file, setFile] = useState(null);
+  const [fileError, setFileError] = useState("");
   const [loadingLocation, setLoadingLocation] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [offlineModalOpen, setOfflineModalOpen] = useState(false);
@@ -87,7 +88,28 @@ const IncidentReportForm = () => {
   };
 
   const handleFileChange = (e) => {
-    setFile(e.target.files[0]);
+    const selectedFile = e.target.files?.[0];
+    if (!selectedFile) {
+      setFile(null);
+      setFileError("");
+      return;
+    }
+
+    if (!selectedFile.type.startsWith("image/")) {
+      setFile(null);
+      setFileError("Please upload an image file (JPG, PNG, WEBP, or GIF).");
+      return;
+    }
+
+    const maxBytes = 10 * 1024 * 1024;
+    if (selectedFile.size > maxBytes) {
+      setFile(null);
+      setFileError("Image must be 10MB or smaller.");
+      return;
+    }
+
+    setFile(selectedFile);
+    setFileError("");
   };
 
   // Handle checkbox change
@@ -359,6 +381,7 @@ const IncidentReportForm = () => {
                           type="file"
                           name="file"
                           onChange={handleFileChange}
+                          accept="image/*"
                           className="sr-only"
                         />
                       </label>
@@ -367,8 +390,14 @@ const IncidentReportForm = () => {
                       </span>
                     </div>
                     <p className="text-xs text-gray-500">
-                      PNG, JPG, PDF up to 10MB
+                      PNG, JPG, WEBP up to 10MB
                     </p>
+                    {file && (
+                      <p className="text-xs text-cyan-300">Selected: {file.name}</p>
+                    )}
+                    {fileError && (
+                      <p className="text-xs text-red-400">{fileError}</p>
+                    )}
                   </div>
                 </div>
               </div>

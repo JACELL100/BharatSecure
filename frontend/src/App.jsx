@@ -73,6 +73,7 @@ const AppRoutes = () => {
         <Route path="/photos" element={<PhotoList />} />
         <Route path="/chat" element={<Chat />} />
         <Route path="/vr/:photoId" element={<VRViewer />} />
+        <Route path="/vr/incident/:incidentId" element={<VRViewer />} />
         <Route path="/About" element={<AboutUs />} />
         <Route path="/heatmap" element={<HeatMap2 />} />
         <Route path="/voice-report" element={<VoiceToText />} />

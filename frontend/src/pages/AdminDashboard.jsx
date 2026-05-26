@@ -89,6 +89,19 @@ const AdminDashboard = () => {
     return "text-gray-400 border-gray-400 bg-gray-400/10";
   };
 
+  const isImageEvidence = (fileUrl) => {
+    if (!fileUrl) {
+      return false;
+    }
+    return /\.(png|jpe?g|webp|gif)$/i.test(fileUrl);
+  };
+
+  const buildIncidentVrPath = (incident) => {
+    const fileUrl = encodeURIComponent(incident.file || "");
+    const title = encodeURIComponent(`Incident ${incident.id}`);
+    return `/vr/incident/${incident.id}?image=${fileUrl}&title=${title}`;
+  };
+
   const { logout } = useAuth();
   const navigate = useNavigate();
 
@@ -303,6 +316,37 @@ const AdminDashboard = () => {
         </div>
 
         <p className="text-gray-300 text-sm mb-3 line-clamp-3 flex-grow">{incident.description}</p>
+
+        {incident.file && (
+          <div className="mb-3">
+            <p className="text-gray-300 text-sm mb-2">Evidence:</p>
+            <div className="flex flex-wrap items-center gap-2">
+              {isImageEvidence(incident.file) && (
+                <img
+                  src={incident.file}
+                  alt={`Evidence for incident ${incident.id}`}
+                  className="h-12 w-12 rounded-lg object-cover border border-white/10"
+                />
+              )}
+              <a
+                href={incident.file}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sky-400 text-sm font-semibold hover:text-sky-300 transition-colors"
+              >
+                View Evidence
+              </a>
+              {isImageEvidence(incident.file) && (
+                <button
+                  onClick={() => navigate(buildIncidentVrPath(incident))}
+                  className="text-xs font-semibold text-purple-300 border border-purple-400/40 px-2 py-1 rounded-lg hover:bg-purple-500/10 transition"
+                >
+                  View in VR
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
         <div className="mb-3">
           <p className="text-gray-300 text-sm">
