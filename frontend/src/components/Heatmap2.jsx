@@ -4,6 +4,7 @@ import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import "leaflet.heat";
 import Legend from "./Legend";
+import API_BASE_URL from "@/lib/apiBase";
 
 // Custom marker icon for police stations
 const policeStationIcon = new L.Icon({
@@ -84,7 +85,7 @@ const HeatMapLayer = ({ data }) => {
         0.6: "rgba(255, 165, 0, 1.0)", // Orange (Medium severity)
         1.0: "rgba(255, 0, 0, 1.0)", // Red (High severity)
       },
-      max: 1.0,
+      max: 3.0,
       minOpacity: 0.4,
     }).addTo(map);
 
@@ -100,8 +101,7 @@ const HeatMapLayer = ({ data }) => {
 const HeatMap = () => {
   const [heatmapData, setHeatmapData] = useState([]);
   const [policeStations, setPoliceStations] = useState([]);
-  const API_HOST = import.meta.env.VITE_API_HOST;
-  const API_URL = (import.meta.env.VITE_API_URL || "https://bharatsecure-backend.onrender.com").replace(/\/+$/, "");
+  const API_URL = API_BASE_URL;
 
   // Get coordinates from localStorage or use default
   const getCoordinates = () => {
@@ -119,28 +119,62 @@ const HeatMap = () => {
 
   const userCoordinates = getCoordinates();
 
+  const parseLocation = (location) => {
+    if (!location) {
+      return null;
+    }
+
+    let parsedLocation = location;
+    if (typeof parsedLocation === "string") {
+      try {
+        parsedLocation = JSON.parse(parsedLocation);
+      } catch (error) {
+        return null;
+      }
+    }
+
+    if (Array.isArray(parsedLocation) && parsedLocation.length >= 2) {
+      const latitude = Number(parsedLocation[0]);
+      const longitude = Number(parsedLocation[1]);
+      if (Number.isNaN(latitude) || Number.isNaN(longitude)) {
+        return null;
+      }
+      return { latitude, longitude };
+    }
+
+    const latitude = Number(parsedLocation.latitude ?? parsedLocation.lat);
+    const longitude = Number(parsedLocation.longitude ?? parsedLocation.lng ?? parsedLocation.lon);
+    if (Number.isNaN(latitude) || Number.isNaN(longitude)) {
+      return null;
+    }
+    return { latitude, longitude };
+  };
+
   useEffect(() => {
     // Fetch incidents from the Django backend
     const fetchIncidents = async () => {
       try {
         const response = await fetch(`${API_URL}/api/all_incidents/`);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch incidents (${response.status})`);
+        }
         const incidents = await response.json();
         console.log("Fetched incidents:", incidents);
 
         const mappedData = incidents
-          .filter(
-            (incident) =>
-              incident.location &&
-              incident.location.latitude !== undefined &&
-              incident.location.longitude !== undefined
-          )
-          .map((incident) => [
-            Number(incident.location.latitude),
-            Number(incident.location.longitude),
-            severityToIntensity(incident.severity),
-          ]);
+          .map((incident) => {
+            const location = parseLocation(incident.location);
+            if (!location) {
+              return null;
+            }
 
-        setHeatmapData(mappedData);
+            return [
+              location.latitude,
+              location.longitude,
+              severityToIntensity(incident.severity),
+            ];
+          })
+          .filter(Boolean);
 
         setHeatmapData(mappedData);
       } catch (error) {
@@ -149,11 +183,11 @@ const HeatMap = () => {
     };
 
     fetchIncidents();
-  }, []);
+  }, [API_URL]);
 
   // Helper function to convert severity to intensity
   const severityToIntensity = (severity) => {
-    switch (severity) {
+    switch ((severity || "").toLowerCase()) {
       case "high":
         return 3; // High severity = intensity 3
       case "medium":

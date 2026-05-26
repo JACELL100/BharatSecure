@@ -4,6 +4,7 @@ import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import "leaflet.heat";
 import { ArrowLeft, Filter, Eye, EyeOff, MapPin, AlertCircle, Info } from "lucide-react";
+import API_BASE_URL from "@/lib/apiBase";
 
 // Custom marker icons
 const userLocationIcon = new L.Icon({
@@ -17,6 +18,18 @@ const policeStationIcon = new L.Icon({
   iconSize: [30, 30],
   iconAnchor: [15, 30],
 });
+
+const SEVERITY_COLORS = {
+  low: "rgba(255, 255, 0, 1.0)",
+  medium: "rgba(255, 165, 0, 1.0)",
+  high: "rgba(255, 0, 0, 1.0)",
+};
+
+const SEVERITY_GRADIENT = {
+  0.33: SEVERITY_COLORS.low,
+  0.66: SEVERITY_COLORS.medium,
+  1.0: SEVERITY_COLORS.high,
+};
 
 // Incident type color mapping with exact names from form
 const INCIDENT_COLORS = {
@@ -190,13 +203,11 @@ const MultiHeatMapLayer = ({ incidentsByType, activeTypes }) => {
           incident.intensity
         ]);
 
-        const gradient = INCIDENT_COLORS[type]?.gradient || INCIDENT_COLORS["Other"].gradient;
-
         const heat = L.heatLayer(heatData, {
           radius: 25,
           blur: 20,
           maxZoom: 15,
-          gradient: gradient,
+          gradient: SEVERITY_GRADIENT,
           max: 3.0,
           minOpacity: 0.5,
         }).addTo(map);
@@ -241,6 +252,23 @@ const LegendComponent = ({ incidentsByType, activeTypes, onToggle, categoryFilte
 
       {isExpanded && (
         <>
+          <div className="p-4 border-b border-white/10">
+            <label className="text-gray-400 text-xs mb-2 block">Severity Colors:</label>
+            <div className="flex items-center gap-3 text-xs text-gray-200">
+              <span className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-sm" style={{ backgroundColor: SEVERITY_COLORS.low }} />
+                Low
+              </span>
+              <span className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-sm" style={{ backgroundColor: SEVERITY_COLORS.medium }} />
+                Medium
+              </span>
+              <span className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-sm" style={{ backgroundColor: SEVERITY_COLORS.high }} />
+                High
+              </span>
+            </div>
+          </div>
           {/* Category Filter */}
           <div className="p-4 border-b border-white/10">
             <label className="text-gray-400 text-xs mb-2 block">Filter by Category:</label>
@@ -271,7 +299,7 @@ const LegendComponent = ({ incidentsByType, activeTypes, onToggle, categoryFilte
                   <div className="flex items-center gap-3 flex-1 min-w-0">
                     <div
                       className="w-4 h-4 rounded-full shadow-lg flex-shrink-0"
-                      style={{ backgroundColor: config.color }}
+                      style={{ backgroundColor: "#94a3b8" }}
                     />
                     <div className="flex-1 min-w-0">
                       <span className="text-white text-xs font-medium block truncate">
@@ -389,8 +417,7 @@ const IncidentTypeHeatMap = () => {
   const [totalIncidents, setTotalIncidents] = useState(0);
   const [categoryFilter, setCategoryFilter] = useState("All");
 
-  const API_URL = (import.meta.env.VITE_API_URL || "https://bharatsecure-backend.onrender.com").replace(/\/+$/, "");
-  const token = localStorage.getItem("accessToken");
+  const API_URL = API_BASE_URL;
 
   // Get user coordinates
   const getCoordinates = () => {
@@ -407,10 +434,41 @@ const IncidentTypeHeatMap = () => {
 
   const userCoordinates = getCoordinates();
 
+  const parseLocation = (location) => {
+    if (!location) {
+      return null;
+    }
+
+    let parsedLocation = location;
+    if (typeof parsedLocation === "string") {
+      try {
+        parsedLocation = JSON.parse(parsedLocation);
+      } catch (error) {
+        return null;
+      }
+    }
+
+    if (Array.isArray(parsedLocation) && parsedLocation.length >= 2) {
+      const latitude = Number(parsedLocation[0]);
+      const longitude = Number(parsedLocation[1]);
+      if (Number.isNaN(latitude) || Number.isNaN(longitude)) {
+        return null;
+      }
+      return { latitude, longitude };
+    }
+
+    const latitude = Number(parsedLocation.latitude ?? parsedLocation.lat);
+    const longitude = Number(parsedLocation.longitude ?? parsedLocation.lng ?? parsedLocation.lon);
+    if (Number.isNaN(latitude) || Number.isNaN(longitude)) {
+      return null;
+    }
+    return { latitude, longitude };
+  };
+
   // Severity to intensity converter
   const severityToIntensity = (severity) => {
     const severityMap = { high: 3, medium: 2, low: 1 };
-    return severityMap[severity?.toLowerCase()] || 1;
+    return severityMap[(severity || "").toLowerCase()] || 1;
   };
 
   // Fetch incidents
@@ -418,56 +476,54 @@ const IncidentTypeHeatMap = () => {
     const fetchIncidents = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`${API_URL}/api/all_station_incidents/`, {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
+        const response = await fetch(`${API_URL}/api/all_incidents/`);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch incidents (${response.status})`);
+        }
+
+        const incidents = await response.json();
+        console.log("Fetched incidents:", incidents);
+
+        const grouped = {};
+        let total = 0;
+
+        // Initialize all incident types
+        Object.keys(INCIDENT_COLORS).forEach(type => {
+          grouped[type] = [];
         });
 
-        if (response.ok) {
-          const incidents = await response.json();
-          console.log("Fetched incidents:", incidents);
+        incidents.forEach((incident) => {
+          const location = parseLocation(incident.location);
+          if (!location) {
+            return;
+          }
 
-          const grouped = {};
-          let total = 0;
+          const type = incident.incidentType || "Other";
+          const intensity = severityToIntensity(incident.severity);
 
-          // Initialize all incident types
-          Object.keys(INCIDENT_COLORS).forEach(type => {
-            grouped[type] = [];
+          // Use exact match or default to "Other"
+          const incidentKey = INCIDENT_COLORS[type] ? type : "Other";
+
+          grouped[incidentKey].push({
+            lat: Number(location.latitude),
+            lng: Number(location.longitude),
+            intensity: intensity,
+            id: incident.id,
+            description: incident.description,
+            severity: incident.severity,
           });
+          total++;
+        });
 
-          incidents.forEach((incident) => {
-            if (incident.location?.latitude && incident.location?.longitude) {
-              const type = incident.incidentType || "Other";
-              const intensity = severityToIntensity(incident.severity);
+        setIncidentsByType(grouped);
+        setTotalIncidents(total);
 
-              // Use exact match or default to "Other"
-              const incidentKey = INCIDENT_COLORS[type] ? type : "Other";
-
-              grouped[incidentKey].push({
-                lat: Number(incident.location.latitude),
-                lng: Number(incident.location.longitude),
-                intensity: intensity,
-                id: incident.id,
-                description: incident.description,
-                severity: incident.severity,
-              });
-              total++;
-            }
-          });
-
-          setIncidentsByType(grouped);
-          setTotalIncidents(total);
-
-          // Initialize all types as active
-          const initialActive = {};
-          Object.keys(INCIDENT_COLORS).forEach(type => {
-            initialActive[type] = true;
-          });
-          setActiveTypes(initialActive);
-        }
+        // Initialize all types as active
+        const initialActive = {};
+        Object.keys(INCIDENT_COLORS).forEach(type => {
+          initialActive[type] = true;
+        });
+        setActiveTypes(initialActive);
       } catch (error) {
         console.error("Error fetching incidents:", error);
       } finally {
@@ -476,7 +532,7 @@ const IncidentTypeHeatMap = () => {
     };
 
     fetchIncidents();
-  }, []);
+  }, [API_URL]);
 
   // Fetch police stations
   useEffect(() => {
