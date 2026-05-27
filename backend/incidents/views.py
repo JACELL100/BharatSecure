@@ -1864,18 +1864,36 @@ class ChatbotView_Therapist(APIView):
     parser_classes=[JSONParser]
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.llm = _get_chat_model()
-        self.prompt = ChatPromptTemplate.from_messages([
-            ("system", """
-             You are an AI assistant specializing in both therapy and legal guidance in India.
-            As a therapist, provide empathetic emotional support, comfort, and guidance, especially for users dealing with trauma.
-            As a legal guidance officer, offer clear, concise advice based on Indian law, ensuring accuracy and relevance.
-            Balance both roles carefully—your responses should be brief yet compassionate, legally sound, and practical. If appropriate, use the user's location to recommend nearby government agencies or legal resources for further assistance.
-             """),
-            MessagesPlaceholder(variable_name="chat_history"),
-            ("human", "{user_input}"),
-        ])
-        self.chain = self.prompt | self.llm | StrOutputParser()
+        self.llm = None
+        self.prompt = None
+        self.chain = None
+        self.chain_error = None
+        self._init_chain()
+
+    def _init_chain(self):
+        if self.chain is not None:
+            return True
+
+        try:
+            self.llm = _get_chat_model()
+            self.prompt = ChatPromptTemplate.from_messages([
+                ("system", """
+                 You are an AI assistant specializing in both therapy and legal guidance in India.
+                As a therapist, provide empathetic emotional support, comfort, and guidance, especially for users dealing with trauma.
+                As a legal guidance officer, offer clear, concise advice based on Indian law, ensuring accuracy and relevance.
+                Balance both roles carefully—your responses should be brief yet compassionate, legally sound, and practical. If appropriate, use the user's location to recommend nearby government agencies or legal resources for further assistance.
+                 """),
+                MessagesPlaceholder(variable_name="chat_history"),
+                ("human", "{user_input}"),
+            ])
+            self.chain = self.prompt | self.llm | StrOutputParser()
+            self.chain_error = None
+            return True
+        except Exception as exc:
+            logger.exception("Failed to initialize Saathi AI chain")
+            self.chain = None
+            self.chain_error = str(exc)
+            return False
 
     def _build_history_messages(self, chat_history):
         messages = []
@@ -1910,6 +1928,20 @@ class ChatbotView_Therapist(APIView):
         if not user_input:
             return Response({"error": "user_input is required"}, status=status.HTTP_400_BAD_REQUEST)
 
+        if not self._init_chain():
+            fallback_message = (
+                "Saathi AI is temporarily unavailable right now. "
+                "Please try again in a few minutes."
+            )
+            chat_history.append(f"User: {user_input}")
+            chat_history.append(f"Bot: {fallback_message}")
+            return Response({
+                "user_input": user_input,
+                "bot_response": fallback_message,
+                "chat_history": chat_history,
+                "error": "chatbot_unavailable",
+            }, status=status.HTTP_200_OK)
+
         history_messages = self._build_history_messages(chat_history)
         if location:
             prompt_input = f"{user_input}\n\nUser location (if relevant): {location}"
@@ -1917,7 +1949,22 @@ class ChatbotView_Therapist(APIView):
             prompt_input = user_input
 
         chain_input = {"user_input": prompt_input, "chat_history": history_messages}
-        response = self.chain.invoke(chain_input)
+        try:
+            response = self.chain.invoke(chain_input)
+        except Exception:
+            logger.exception("Saathi AI invocation failed")
+            fallback_message = (
+                "Saathi AI had trouble responding just now. "
+                "Please try again."
+            )
+            chat_history.append(f"User: {user_input}")
+            chat_history.append(f"Bot: {fallback_message}")
+            return Response({
+                "user_input": user_input,
+                "bot_response": fallback_message,
+                "chat_history": chat_history,
+                "error": "chatbot_failure",
+            }, status=status.HTTP_200_OK)
 
         chat_history.append(f"User: {user_input}")
         chat_history.append(f"Bot: {response}")
