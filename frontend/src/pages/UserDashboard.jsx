@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 
 import { MessageCircle } from "lucide-react";
 import { AlertTriangle } from "lucide-react";
@@ -14,9 +14,7 @@ import {
 import Footer from "@/components/Footer";
 import { useAuth } from "@/context/AuthContext";
 import FloatingChatbot from "@/components/FloatingChatbot";
-import { Navigate, useNavigate } from "react-router-dom";
-import OrderProgress from "@/components/ProgressBar";
-import ChartsUser from "./charts-user";
+import { useNavigate } from "react-router-dom";
 import API_BASE_URL from "@/lib/apiBase";
 
 const UserDashboard = () => {
@@ -28,6 +26,7 @@ const UserDashboard = () => {
   const [resolved, setResolved] = useState(0);
   const [unresolved, setUnResolved] = useState(0);
   const [incidents, setIncidents] = useState([]);
+  const [analyticsRange, setAnalyticsRange] = useState(30);
   const API_URL = API_BASE_URL;
 
   const token = localStorage.getItem("accessToken");
@@ -88,8 +87,9 @@ const UserDashboard = () => {
     let unresolvedIncidents = 0;
 
     incidents.forEach((inci) => {
+      const statusValue = String(inci.status || "").toLowerCase();
       totalIncidents++;
-      if (inci.status === "Resolved") {
+      if (statusValue === "resolved") {
         resolvedIncidents++;
       } else {
         unresolvedIncidents++;
@@ -129,10 +129,14 @@ const UserDashboard = () => {
             setIncidents(data.incidents); // Set incidents state here
             setTotal(data.incidents.length);
             setResolved(
-              data.incidents.filter((inci) => inci.status === "Resolved").length
+              data.incidents.filter(
+                (inci) => String(inci.status || "").toLowerCase() === "resolved"
+              ).length
             );
             setUnResolved(
-              data.incidents.filter((inci) => inci.status !== "Resolved").length
+              data.incidents.filter(
+                (inci) => String(inci.status || "").toLowerCase() !== "resolved"
+              ).length
             );
           } else {
             console.error("Unexpected data format:", data);
@@ -156,6 +160,151 @@ const UserDashboard = () => {
 
     fetchIncidents();
   }, [API_URL, navigate, token]);
+
+  const analyticsIncidents = useMemo(() => {
+    if (!Array.isArray(incidents)) {
+      return [];
+    }
+
+    if (!analyticsRange) {
+      return incidents;
+    }
+
+    const now = Date.now();
+    const cutoff = now - analyticsRange * 24 * 60 * 60 * 1000;
+    return incidents.filter((incident) => {
+      const reportedAt = incident.reported_at || incident.reportedAt;
+      if (!reportedAt) {
+        return true;
+      }
+      const parsedDate = new Date(reportedAt);
+      if (Number.isNaN(parsedDate.getTime())) {
+        return true;
+      }
+      return parsedDate.getTime() >= cutoff;
+    });
+  }, [analyticsRange, incidents]);
+
+  const analyticsSummary = useMemo(() => {
+    const totals = {
+      total: analyticsIncidents.length,
+      resolved: 0,
+      active: 0,
+      averageScore: 0,
+      latestDate: null,
+    };
+    const severityCounts = { low: 0, medium: 0, high: 0 };
+    const statusCounts = {
+      submitted: 0,
+      "under investigation": 0,
+      resolved: 0,
+      other: 0,
+    };
+    const typeCounts = {};
+    const monthlyCounts = {};
+    let scoreSum = 0;
+    let scoreCount = 0;
+
+    analyticsIncidents.forEach((incident) => {
+      const severity = String(incident.severity || "").toLowerCase();
+      if (severityCounts[severity] !== undefined) {
+        severityCounts[severity] += 1;
+      }
+
+      const status = String(incident.status || "").toLowerCase();
+      if (statusCounts[status] !== undefined) {
+        statusCounts[status] += 1;
+      } else {
+        statusCounts.other += 1;
+      }
+
+      if (status === "resolved") {
+        totals.resolved += 1;
+      } else {
+        totals.active += 1;
+      }
+
+      const incidentType = incident.incidentType || "Other";
+      typeCounts[incidentType] = (typeCounts[incidentType] || 0) + 1;
+
+      const scoreValue = Number(incident.score);
+      if (Number.isFinite(scoreValue)) {
+        scoreSum += scoreValue;
+        scoreCount += 1;
+      }
+
+      const reportedAt = incident.reported_at || incident.reportedAt;
+      if (reportedAt) {
+        const parsedDate = new Date(reportedAt);
+        if (!Number.isNaN(parsedDate.getTime())) {
+          if (!totals.latestDate || parsedDate > totals.latestDate) {
+            totals.latestDate = parsedDate;
+          }
+          const monthKey = `${parsedDate.getFullYear()}-${String(parsedDate.getMonth() + 1).padStart(2, "0")}`;
+          monthlyCounts[monthKey] = (monthlyCounts[monthKey] || 0) + 1;
+        }
+      }
+    });
+
+    totals.averageScore = scoreCount > 0 ? scoreSum / scoreCount : 0;
+
+    const topIncidentTypes = Object.entries(typeCounts)
+      .map(([type, count]) => ({ type, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    const monthlyTrend = Object.keys(monthlyCounts)
+      .sort()
+      .map((key) => {
+        const [year, month] = key.split("-");
+        const labelDate = new Date(Number(year), Number(month) - 1, 1);
+        return {
+          key,
+          label: labelDate.toLocaleString("en-US", { month: "short", year: "numeric" }),
+          count: monthlyCounts[key],
+        };
+      });
+
+    return {
+      totals,
+      severityCounts,
+      statusCounts,
+      topIncidentTypes,
+      monthlyTrend,
+    };
+  }, [analyticsIncidents]);
+
+  const recentIncidents = useMemo(() => {
+    return [...analyticsIncidents]
+      .map((incident) => {
+        const reportedAt = incident.reported_at || incident.reportedAt;
+        const parsedDate = reportedAt ? new Date(reportedAt) : null;
+        return {
+          ...incident,
+          parsedDate: parsedDate && !Number.isNaN(parsedDate.getTime()) ? parsedDate : null,
+        };
+      })
+      .sort((a, b) => {
+        if (a.parsedDate && b.parsedDate) {
+          return b.parsedDate - a.parsedDate;
+        }
+        if (a.parsedDate) {
+          return -1;
+        }
+        if (b.parsedDate) {
+          return 1;
+        }
+        return 0;
+      })
+      .slice(0, 5);
+  }, [analyticsIncidents]);
+
+  const getPercent = (count, totalValue) => {
+    if (!totalValue) {
+      return 0;
+    }
+    return Math.round((count / totalValue) * 100);
+  };
 
   console.log("user data dashboard", incidents);
   return (
@@ -207,6 +356,220 @@ const UserDashboard = () => {
               <Timer className="text-yellow-400 w-12 h-12 group-hover:scale-110 transition-transform" />
             </div>
           </div>
+
+          {/* User Analytics */}
+          <section className="mt-6 md:mt-10">
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-6 md:p-8 shadow-[0px_5px_15px_rgba(255,255,255,0.1),0px_10px_25px_rgba(0,0,0,0.7)]">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                  <h2 className="text-2xl md:text-3xl font-bold text-white">
+                    Your Analytics
+                  </h2>
+                  <p className="text-sm md:text-base text-gray-400">
+                    Real-time insights based on your reports
+                  </p>
+                </div>
+                <select
+                  className="w-full md:w-auto px-4 py-2 bg-slate-900/70 text-white border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-400/40"
+                  value={analyticsRange}
+                  onChange={(e) => setAnalyticsRange(Number(e.target.value))}
+                >
+                  <option value={7}>Last 7 days</option>
+                  <option value={30}>Last 30 days</option>
+                  <option value={90}>Last 90 days</option>
+                  <option value={365}>Last year</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+                <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                  <p className="text-sm text-gray-400">Total Reports</p>
+                  <p className="text-3xl font-bold text-white">
+                    {analyticsSummary.totals.total}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                  <p className="text-sm text-gray-400">Resolution Rate</p>
+                  <p className="text-3xl font-bold text-white">
+                    {getPercent(
+                      analyticsSummary.totals.resolved,
+                      analyticsSummary.totals.total
+                    )}%
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                  <p className="text-sm text-gray-400">Average Score</p>
+                  <p className="text-3xl font-bold text-white">
+                    {analyticsSummary.totals.averageScore.toFixed(1)}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                  <p className="text-sm text-gray-400">Latest Report</p>
+                  <p className="text-xl font-semibold text-white">
+                    {analyticsSummary.totals.latestDate
+                      ? analyticsSummary.totals.latestDate.toLocaleDateString()
+                      : "No reports"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+                <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                  <h3 className="text-lg font-semibold text-white mb-4">
+                    Severity Breakdown
+                  </h3>
+                  {[
+                    { key: "high", label: "High", color: "bg-red-400" },
+                    { key: "medium", label: "Medium", color: "bg-yellow-400" },
+                    { key: "low", label: "Low", color: "bg-blue-400" },
+                  ].map((item) => {
+                    const count = analyticsSummary.severityCounts[item.key];
+                    const percent = getPercent(count, analyticsSummary.totals.total);
+                    return (
+                      <div key={item.key} className="mb-4 last:mb-0">
+                        <div className="flex justify-between text-sm text-gray-300 mb-2">
+                          <span>{item.label}</span>
+                          <span>
+                            {count} ({percent}%)
+                          </span>
+                        </div>
+                        <div className="h-2 w-full rounded-full bg-white/10">
+                          <div
+                            className={`h-2 rounded-full ${item.color}`}
+                            style={{ width: `${percent}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                  <h3 className="text-lg font-semibold text-white mb-4">
+                    Status Overview
+                  </h3>
+                  {[
+                    { key: "submitted", label: "Submitted", color: "bg-sky-400" },
+                    {
+                      key: "under investigation",
+                      label: "Under Investigation",
+                      color: "bg-amber-400",
+                    },
+                    { key: "resolved", label: "Resolved", color: "bg-emerald-400" },
+                  ].map((item) => {
+                    const count = analyticsSummary.statusCounts[item.key] || 0;
+                    const percent = getPercent(count, analyticsSummary.totals.total);
+                    return (
+                      <div key={item.key} className="mb-4 last:mb-0">
+                        <div className="flex justify-between text-sm text-gray-300 mb-2">
+                          <span>{item.label}</span>
+                          <span>
+                            {count} ({percent}%)
+                          </span>
+                        </div>
+                        <div className="h-2 w-full rounded-full bg-white/10">
+                          <div
+                            className={`h-2 rounded-full ${item.color}`}
+                            style={{ width: `${percent}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+                <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                  <h3 className="text-lg font-semibold text-white mb-4">
+                    Monthly Trend
+                  </h3>
+                  {analyticsSummary.monthlyTrend.length > 0 ? (
+                    <div className="space-y-3">
+                      {analyticsSummary.monthlyTrend.map((entry) => {
+                        const maxCount = Math.max(
+                          ...analyticsSummary.monthlyTrend.map((item) => item.count)
+                        );
+                        const width = maxCount
+                          ? Math.round((entry.count / maxCount) * 100)
+                          : 0;
+                        return (
+                          <div key={entry.key}>
+                            <div className="flex justify-between text-sm text-gray-300 mb-1">
+                              <span>{entry.label}</span>
+                              <span>{entry.count}</span>
+                            </div>
+                            <div className="h-2 w-full rounded-full bg-white/10">
+                              <div
+                                className="h-2 rounded-full bg-sky-400"
+                                style={{ width: `${width}%` }}
+                              ></div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-400">No monthly data available.</p>
+                  )}
+                </div>
+
+                <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                  <h3 className="text-lg font-semibold text-white mb-4">
+                    Top Incident Types
+                  </h3>
+                  {analyticsSummary.topIncidentTypes.length > 0 ? (
+                    <div className="space-y-3">
+                      {analyticsSummary.topIncidentTypes.map((entry) => (
+                        <div
+                          key={entry.type}
+                          className="flex items-center justify-between text-sm text-gray-300"
+                        >
+                          <span className="truncate pr-2">{entry.type}</span>
+                          <span className="text-white font-semibold">
+                            {entry.count}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-400">No incident type data available.</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-6 rounded-2xl border border-white/10 bg-black/20 p-4">
+                <h3 className="text-lg font-semibold text-white mb-4">
+                  Recent Activity
+                </h3>
+                {recentIncidents.length > 0 ? (
+                  <div className="space-y-3">
+                    {recentIncidents.map((incident) => (
+                      <div
+                        key={incident.id}
+                        className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 text-sm text-gray-300"
+                      >
+                        <div>
+                          <span className="text-white font-semibold">
+                            {incident.incidentType || "Incident"}
+                          </span>
+                          <span className="text-gray-500"> • </span>
+                          <span className="capitalize">{incident.status}</span>
+                        </div>
+                        <span className="text-gray-400">
+                          {incident.parsedDate
+                            ? incident.parsedDate.toLocaleString()
+                            : "Date unavailable"}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-400">No recent incidents yet.</p>
+                )}
+              </div>
+            </div>
+          </section>
 
           {/* All Incidents - Desktop Table View */}
           <div className="hidden md:block rounded-2xl border border-white/10 overflow-hidden">
@@ -524,7 +887,6 @@ const UserDashboard = () => {
             </div>
           </div>
         </div>
-        <ChartsUser />
         <Footer />
       </div>
 
