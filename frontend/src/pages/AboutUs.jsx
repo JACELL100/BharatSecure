@@ -11,7 +11,6 @@ const Video = lazy(() => import("../components/about-components/Video.jsx"));
 const AboutUsDetails = lazy(() =>
   import("../components/about-components/AboutUsDetails.jsx")
 );
-const Team = lazy(() => import("../components/about-components/Team.jsx"));
 const Footer = lazy(() => import("../components/Footer.jsx"));
 
 const AboutUs = () => {
@@ -72,18 +71,6 @@ const AboutUs = () => {
       >
         <div className="mx-4 sm:mx-6 lg:mx-8 my-6 glass-panel rounded-3xl overflow-hidden reveal-up">
           <Video />
-        </div>
-      </Suspense>
-
-      <Suspense
-        fallback={
-          <div style={{ height: "40%", width: "100%" }}>
-            <div className="loader"></div>
-          </div>
-        }
-      >
-        <div className="mx-4 sm:mx-6 lg:mx-8 my-6 glass-panel rounded-3xl overflow-hidden reveal-up">
-          <Team />
         </div>
       </Suspense>
 
